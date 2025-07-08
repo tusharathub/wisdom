@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as articles from "../articles.js";
 import type * as schems from "../schems.js";
 
 /**
@@ -24,6 +25,7 @@ import type * as schems from "../schems.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  articles: typeof articles;
   schems: typeof schems;
 }>;
 export declare const api: FilterApi<
