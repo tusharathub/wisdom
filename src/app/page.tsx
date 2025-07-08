@@ -5,11 +5,14 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@clerk/nextjs';
 
 
 export default function Home() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const router = useRouter();
+  const {isLoaded, isSignedIn} = useAuth();
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -24,6 +27,15 @@ export default function Home() {
     limit: 5,
   });
 
+  const handeViewAllClick = () => {
+    if(!isLoaded) return;
+
+    if(isSignedIn) {
+      router.push("/all-articles")
+    }else {
+      router.push("sign-in");
+    }
+  }
   return (
     <div className="min-h-screen p-8 bg-gray-100 text-gray-900">
       <h1 className="text-5xl font-bold mb-6 mt-8 text-center">
@@ -69,11 +81,13 @@ export default function Home() {
 
       {articles && articles.length > 0 && (
         <div className='text-center mt-6'>
-        <Link 
-      className="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-blue-700"
-          href="/login">
-            login
-          </Link>
+        <button 
+        onClick={handeViewAllClick}
+        disabled={!isLoaded}
+        className='bg-blue-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-blue-500 '
+        >
+          View all
+        </button>
          
         </div>
       )

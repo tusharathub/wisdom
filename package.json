@@ -9,6 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/core": "^0.37.0",
+    "@clerk/nextjs": "^6.23.3",
+    "@convex-dev/auth": "^0.0.87",
     "convex": "^1.25.2",
     "next": "15.3.5",
     "react": "^19.0.0",
