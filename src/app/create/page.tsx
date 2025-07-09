@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 
-export default function WritePage() {
+export default function Create() {
   const { userId } : any = auth();
 
   if (!userId) {

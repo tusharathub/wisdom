@@ -33,6 +33,7 @@ export const searchArticles = query({
   args: {
     query: v.string(),
     limit: v.optional(v.number()),
+    skip: v.optional(v.number()),
   },
   handler: async (ctx, { query, limit }) => {
     const all = await ctx.db.query('articles').collect();
@@ -51,3 +52,10 @@ export const searchArticles = query({
     return filtered.slice(0, limit || 5);
   },
 });
+
+export const getArticleById = query({
+  args : { id: v.id("articles")},
+  handler: async (ctx, {id}) => {
+    return await ctx.db.get(id);
+  }
+})

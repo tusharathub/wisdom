@@ -64,9 +64,7 @@ export default function Home() {
                 <li
                   key={article._id}
                   className="hover:bg-gray-100 px-4 py-2 rounded cursor-pointer transition"
-                  onClick={() => {
-                    alert(`Selected: ${article.title}`);
-                  }}
+                 onClick={() => router.push(`/read/${article._id}`)}
                 >
                   <h3 className="text-xl font-medium">{article.title}</h3>
                   <p className="text-gray-600 line-clamp-2 text-sm">
@@ -84,7 +82,7 @@ export default function Home() {
         <button 
         onClick={handeViewAllClick}
         disabled={!isLoaded}
-        className='bg-blue-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-blue-500 '
+        className='bg-red-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-red-500 '
         >
           View all
         </button>
