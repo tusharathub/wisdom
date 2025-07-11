@@ -1,5 +1,10 @@
-import { SignUp } from '@clerk/nextjs';
+import { SignUp } from "@clerk/nextjs";
 
-export default function Page() {
-  return <SignUp path="/sign-up" />  ;
-}
+const SignUpPage = () => {
+  return (
+    <main className="flex h-screen w-full items-center justify-center">
+      <SignUp path="sign-up" />
+    </main>
+  );
+};
+export default SignUpPage;
