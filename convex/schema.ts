@@ -30,7 +30,6 @@ export default defineSchema({
     userId: v.string(),
     content: v.string(),
     createdAt: v.number(),
-    userName: v.optional(v.string()),
+    username: v.optional(v.string()),
   }).index("byArticle", ["articleId"]),
 });
-
