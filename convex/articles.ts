@@ -1,26 +1,52 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-
 export const createArticle = mutation({
   args: {
     title: v.string(),
     content: v.string(),
-    tags: v.array(v.string())
+    tags: v.optional(v.array(v.string())),
   },
-  handler: async ({ db, auth }, { title, content, tags }) => {
-    const identity = await auth.getUserIdentity();
-    if (!identity) throw new Error('Not signed in');
-    return db.insert("articles", {
+  handler: async (ctx, { title, content, tags }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+
+    const username = user?.username ?? "Anonymous"
+    await ctx.db.insert("articles", {
       title,
       content,
-      tags,
+      createdAt: Date.now(),
       authorId: identity.subject,
+      userId: identity.subject,
+      username, 
       likes: [],
-      createdAt: Date.now()
+      tags: tags ?? [],
     });
-  }
+  },
 });
+
+// export const createArticle = mutation({
+//   args: {
+//     title: v.string(),
+//     content: v.string(),
+//   },
+//   handler: async ({ db, auth }, { title, content }) => {
+//     const identity = await auth.getUserIdentity();
+//     if (!identity) throw new Error('Not signed in');
+//     return db.insert("articles", {
+//       title,
+//       content,
+//       authorId: identity.subject,
+//       likes: [],
+//       createdAt: Date.now()
+//     });
+//   }
+// });
 
 
 export const getTopArticles = query(async ({ db }) => {
@@ -45,7 +71,7 @@ export const searchArticles = query({
     const lower = query.toLowerCase();
 
     const filtered = all.filter((a) => {
-      const haystack = `${a.title} ${a.content} ${a.tags.join(' ')}`.toLowerCase();
+      const haystack = `${a.title} ${a.content} `.toLowerCase();
       return haystack.includes(lower);
     });
 

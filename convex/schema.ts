@@ -14,10 +14,12 @@ export default defineSchema({
   articles: defineTable({
     title: v.string(),
     content: v.string(),
-    authorId: v.string(),
-    tags: v.array(v.string()),
-    likes: v.array(v.string()),
     createdAt: v.number(),
+    authorId: v.string(),
+    userId: v.string(),
+    username: v.string(),
+    likes: v.array(v.string()),
+    tags: v.optional(v.array(v.string())),
   }),
 
   likes: defineTable({
@@ -33,23 +35,20 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
     username: v.optional(v.string()),
-  })
-    .index("byArticle", ["articleId"]),
-    // .index("by_articleId", ["articleId"]),
+  }).index("byArticle", ["articleId"]),
+  // .index("by_articleId", ["articleId"]),
 
   replyOnComment: defineTable({
-    commentId : v.id("comments"),
-    userId : v.string(),
-    content : v.string(),
-    createdAt : v.number(),
+    commentId: v.id("comments"),
+    userId: v.string(),
+    content: v.string(),
+    createdAt: v.number(),
     username: v.optional(v.string()),
   }).index("by_commentId", ["commentId"]),
 
   likesOnComment: defineTable({
     commentId: v.id("comments"),
     userId: v.string(),
-    createdAt : v.number(),
-  }).index("by_comment_user", ["commentId", "userId"])
+    createdAt: v.number(),
+  }).index("by_comment_user", ["commentId", "userId"]),
 });
-
-

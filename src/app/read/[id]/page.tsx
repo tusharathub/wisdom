@@ -53,6 +53,8 @@ export default function ArticleDetailPage() {
   return (
     <div className="max-w-4xl mx-auto p-10 mt-10 bg-white rounded shadow">
       <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
+      <p className="text-gray-500 text-sm mb-6">by {article.username}</p>
+
       <p className="text-gray-700 whitespace-pre-wrap text-lg mb-8">
         {article.content}{" "}
       </p>
@@ -175,7 +177,7 @@ export default function ArticleDetailPage() {
                       await addReply({
                         commentId: c._id,
                         content: replyInputs[c._id],
-                        username: user.fullName || "anonymous reply",
+                        username: user.username || "anonymous reply",
                       });
                       setReplyInputs((prev) => ({ ...prev, [c._id]: "" }));
                     }}
