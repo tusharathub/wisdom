@@ -34,6 +34,22 @@ export default defineSchema({
     createdAt: v.number(),
     username: v.optional(v.string()),
   })
-    .index("byArticle", ["articleId"])
+    .index("byArticle", ["articleId"]),
     // .index("by_articleId", ["articleId"]),
+
+  replyOnComment: defineTable({
+    commentId : v.id("comments"),
+    userId : v.string(),
+    content : v.string(),
+    createdAt : v.number(),
+    username: v.optional(v.string()),
+  }).index("by_commentId", ["commentId"]),
+
+  likesOnComment: defineTable({
+    commentId: v.id("comments"),
+    userId: v.string(),
+    createdAt : v.number(),
+  }).index("by_comment_user", ["commentId", "userId"])
 });
+
+

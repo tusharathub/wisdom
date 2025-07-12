@@ -108,3 +108,58 @@ export const like = mutation({
     }
   },
 });
+
+export const toggleCommentLike = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, { commentId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const existing = await ctx.db
+      .query("likesOnComment")
+      .withIndex("by_comment_user", (q) =>
+        q.eq("commentId", commentId).eq("userId", identity.subject)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    } else {
+      await ctx.db.insert("likesOnComment", {
+        commentId,
+        userId: identity.subject,
+        createdAt: Date.now(),
+      });
+    }
+  },
+});
+
+// export const getCommentLikes =  query({
+//   args: {commentId : v.id("comments")},
+//   handler : async (ctx, {commentId}) => {
+//     return await ctx.db
+//     .query("likesOnComment")
+//     .withIndex("by_comment_user", (q) => q.eq("commentId", commentId))
+//     .collect();
+//   }
+// })
+
+
+export const getAllCommentLikes = query({
+  args: { articleId: v.id("articles") },
+  handler: async (ctx, { articleId }) => {
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("byArticle", (q) => q.eq("articleId", articleId))
+      .collect();
+
+    const likes = await ctx.db
+      .query("likesOnComment")
+      .collect();
+
+    return likes.filter((l) =>
+      comments.some((c) => c._id === l.commentId)
+    );
+  },
+});
+

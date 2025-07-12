@@ -34,8 +34,19 @@ export default function ArticleDetailPage() {
   const like = useMutation(api.likes.like);
   const addComment = useMutation(api.comments.addComment);
   const deleteComment = useMutation(api.comments.deleteComment);
+  const toggleCommentLike = useMutation(api.likes.toggleCommentLike);
+  const addReply = useMutation(api.comments.addReply);
+
+  const replies = useQuery(api.comments.getRepliesByArticle, { articleId });
+  const commentLikes = useQuery(api.likes.getAllCommentLikes, { articleId });
+
+  // const getReplies = useQuery(api.comments.getReply, { commentId: c._id });
 
   const [commentInput, setCommentInput] = useState("");
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [showReplyBoxes, setShowReplyBoxes] = useState<Record<string, boolean>>(
+    {}
+  );
 
   if (!article) return <p className="p-6">Loading article...</p>;
 
@@ -43,7 +54,7 @@ export default function ArticleDetailPage() {
     <div className="max-w-4xl mx-auto p-10 mt-10 bg-white rounded shadow">
       <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
       <p className="text-gray-700 whitespace-pre-wrap text-lg mb-8">
-        {article.content}
+        {article.content}{" "}
       </p>
 
       <div className="mb-8 flex items-center gap-4">
@@ -67,11 +78,7 @@ export default function ArticleDetailPage() {
             onSubmit={async (e) => {
               e.preventDefault();
               if (!commentInput.trim()) return;
-              await addComment({
-                articleId,
-                content: commentInput,
-                // username: user?.fullName || "anonymous",
-              });
+              await addComment({ articleId, content: commentInput });
               setCommentInput("");
             }}
             className="mb-6"
@@ -79,9 +86,9 @@ export default function ArticleDetailPage() {
             <textarea
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value)}
-              placeholder="Write a comment..."
+              placeholder="Write your thoughts..."
               className="w-full border p-3 rounded mb-2"
-              rows={3}
+              rows={2}
             />
             <button
               type="submit"
@@ -102,6 +109,14 @@ export default function ArticleDetailPage() {
           {comments?.map((c) => {
             const isOwner = c.userId === user?.id;
             const timeAgo = formatTimeAgo(c.createdAt);
+            const commentReplies = replies?.filter(
+              (r) => r.commentId === c._id
+            );
+            const likesOnComment = commentLikes?.filter(
+              (l) => l.commentId === c._id
+            );
+            const repliesForComment =
+              replies?.filter((r) => r.commentId === c._id) ?? [];
 
             return (
               <div key={c._id} className="bg-gray-100 p-4 rounded relative">
@@ -114,10 +129,35 @@ export default function ArticleDetailPage() {
 
                 <p className="text-gray-900">{c.content}</p>
 
+                {/* like / reply/ delete */}
+                <div className=" felx gap-4 items-center text-sm">
+                  <button
+                    onClick={() => toggleCommentLike({ commentId: c._id })}
+                    className="text-pink-800 hover:underline"
+                  >
+                    Like
+                  </button>
+                  <span className="text-gray-700">
+                    {likesOnComment ? likesOnComment.length : 0}{" "}
+                    {likesOnComment?.length === 1 ? "like" : "likes"}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setShowReplyBoxes((prev) => ({
+                        ...prev,
+                        [c._id]: !prev[c._id],
+                      }))
+                    }
+                    className="text-blue-900 hover:underline"
+                  >
+                    Reply
+                  </button>
+                </div>
+
                 {isOwner && (
                   <button
                     onClick={async () => {
-                      if (confirm("Delete this comment?")) {
+                      if (confirm("Are you sure?")) {
                         await deleteComment({ commentId: c._id });
                       }
                     }}
@@ -125,6 +165,65 @@ export default function ArticleDetailPage() {
                   >
                     Delete
                   </button>
+                )}
+
+                {/* reply box */}
+                {showReplyBoxes[c._id] && user && (
+                  <form
+                    onSubmit={async (e) => {
+                      if (!replyInputs[c._id]?.trim()) return;
+                      await addReply({
+                        commentId: c._id,
+                        content: replyInputs[c._id],
+                        username: user.fullName || "anonymous reply",
+                      });
+                      setReplyInputs((prev) => ({ ...prev, [c._id]: "" }));
+                    }}
+                    className="mt-3"
+                  >
+                    <textarea
+                      value={replyInputs[c._id] || ""}
+                      onChange={(e) =>
+                        setReplyInputs((prev) => ({
+                          ...prev,
+                          [c._id]: e.target.value,
+                        }))
+                      }
+                      placeholder="repy to this..."
+                      className="w-full p-2 border rounded mb-2"
+                      rows={2}
+                    />
+                    <button
+                      type="submit"
+                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                    >
+                      Post Reply
+                    </button>
+                  </form>
+                )}
+
+                {/* replies  */}
+                {repliesForComment.length > 0 && (
+                  <div className="mt-4 pl-4 border-l-2 border-gray-300 space-y-3">
+                    {repliesForComment.map((r) => (
+                      <div
+                        key={r._id}
+                        className="bg-white p-2 rounded shadow-sm"
+                      >
+                        <div className="flex justify-between">
+                          <span className="text-sm font-semibold text-gray-800">
+                            {r.username || "Anonymous"}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {formatTimeAgo(r.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-gray-800 text-sm mt-1">
+                          {r.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             );
