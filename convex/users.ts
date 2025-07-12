@@ -3,23 +3,27 @@ import { v } from "convex/values";
 
 export const syncUser = mutation({
   args: {
-    name: v.string(),
+    username: v.string(),
     email: v.string(),
     clerkId: v.string(),
-    image: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { username, email, clerkId, imageUrl }) => {
     const existingUser = await ctx.db
       .query("users")
-      .filter((q) => q.eq(q.field("clerkId"), args.clerkId))
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
       .first();
 
     if (existingUser) return;
 
-    return await ctx.db.insert("users", args);
+    return await ctx.db.insert("users", {
+      username,
+      email,
+      clerkId,
+      imageUrl,
+    });
   },
 });
-
 export const updateUser = mutation({
   args: {
     name: v.string(),
@@ -38,3 +42,29 @@ export const updateUser = mutation({
     return await ctx.db.patch(existingUser._id, args);
   },
 });
+
+export const saveUser = mutation({
+  args: {
+    username: v.string(),
+    email: v.string(),
+    imageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, {username, email, imageUrl}) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if(!identity ) throw new Error("user not authenticated");
+
+    const existing = await ctx.db
+    .query("users")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .unique();
+
+    if(!existing) {
+      await ctx.db.insert("users", {
+        username,
+        email,
+        imageUrl,
+        clerkId: identity.subject,
+      })
+    }
+  }
+})

@@ -3,11 +3,13 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
-    name: v.string(),
+    username: v.string(),
     email: v.string(),
-    image: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
     clerkId: v.string(),
-  }).index("by_clerk_id", ["clerkId"]),
+  })
+    .index("by_clerk_id", ["clerkId"])
+    .index("by_email", ["email"]),
 
   articles: defineTable({
     title: v.string(),
@@ -31,5 +33,7 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
     username: v.optional(v.string()),
-  }).index("byArticle", ["articleId"]),
+  })
+    .index("byArticle", ["articleId"])
+    // .index("by_articleId", ["articleId"]),
 });

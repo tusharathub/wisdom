@@ -50,25 +50,27 @@ http.route({
     const eventType = evt.type;
     console.log(evt);
 
-    if(eventType == "user.created"){
-      const { id, first_name, last_name, image_url, email_addresses } = evt.data;
+  if (eventType === "user.created") {
+  const { id, first_name, last_name, image_url, email_addresses } = evt.data;
+  const email = email_addresses[0].email_address;
 
-      const email = email_addresses[0].email_address;
+  const username = evt.data.username || "Anonymous";
 
-      const name = `${first_name || ""}, ${last_name || ""}`;
+    
 
-      try {
-        await ctx.runMutation(api.users.syncUser, {
-            email, 
-            name,
-            image: image_url,
-            clerkId: id,
-        })
-     }catch(error){
-        console.log("error in creating user", error);
-        return new Response("error in creating user", {status: 500});
-      }
-    }
+  try {
+    await ctx.runMutation(api.users.syncUser, {
+      email,
+      username,
+      imageUrl: image_url,
+      clerkId: id,
+    });
+  } catch (error) {
+    console.log("error in creating user", error);
+    return new Response("error in creating user", { status: 500 });
+  }
+}
+
 
     return new Response("webhooks processed successfully", { status: 200 });
   }),

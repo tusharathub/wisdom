@@ -70,7 +70,7 @@ export default function ArticleDetailPage() {
               await addComment({
                 articleId,
                 content: commentInput,
-                username: user?.fullName || "anonymous",
+                // username: user?.fullName || "anonymous",
               });
               setCommentInput("");
             }}
