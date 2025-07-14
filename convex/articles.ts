@@ -11,25 +11,25 @@ export const createArticle = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-const user = await ctx.db
-    .query("users")
-    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-    .unique();
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
 
-    const username = user?.username ?? "Anonymous"
+    const username = user?.username ?? "Anonymous";
+
     await ctx.db.insert("articles", {
       title,
       content,
       createdAt: Date.now(),
       authorId: identity.subject,
-      userId: identity.subject,
-      username, 
+      // userId: identity.subject,
+      username,
       likes: [],
       tags: tags ?? [],
     });
   },
 });
-
 // export const createArticle = mutation({
 //   args: {
 //     title: v.string(),
@@ -48,11 +48,8 @@ const user = await ctx.db
 //   }
 // });
 
-
 export const getTopArticles = query(async ({ db }) => {
-  return db.query("articles")
-    .order("desc")
-    .take(5);
+  return db.query("articles").order("desc").take(5);
 });
 
 export const searchArticles = query({
@@ -62,7 +59,7 @@ export const searchArticles = query({
     skip: v.optional(v.number()),
   },
   handler: async (ctx, { query, limit }) => {
-    const all = await ctx.db.query('articles').collect();
+    const all = await ctx.db.query("articles").collect();
 
     if (!query.trim()) {
       return all.slice(0, limit || 5);
@@ -80,8 +77,19 @@ export const searchArticles = query({
 });
 
 export const getArticleById = query({
-  args : { id: v.id("articles")},
-  handler: async (ctx, {id}) => {
+  args: { id: v.id("articles") },
+  handler: async (ctx, { id }) => {
     return await ctx.db.get(id);
+  },
+});
+
+export const getMyArticles = query({
+  args: {authorId : v.string()},
+  handler: async (ctx, {authorId}) => {
+    return await ctx.db
+    .query("articles")
+    .withIndex("by_authorId", (q) => q.eq("authorId", authorId))
+    .order("asc")
+    .collect()
   }
 })

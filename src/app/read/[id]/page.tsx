@@ -44,9 +44,7 @@ export default function ArticleDetailPage() {
 
   const [commentInput, setCommentInput] = useState("");
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
-  const [showReplyBoxes, setShowReplyBoxes] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [showReplyBoxes, setShowReplyBoxes] = useState<Record<string, boolean>>({});
 
   if (!article) return <p className="p-6">Loading article...</p>;
 

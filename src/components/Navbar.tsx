@@ -1,25 +1,35 @@
-'use client';
+"use client";
 
-import { UserButton } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
+import Link from "next/link";
+import { UserButton, useUser } from "@clerk/nextjs";
 
 export default function Navbar() {
-  const router = useRouter();
+  const { user } = useUser();
 
   return (
-    <nav className="w-full bg-white border-b shadow px-6 py-4 flex justify-between items-center">
-      <div className="text-2xl font-bold text-red-500 cursor-pointer" onClick={() => router.push('/')}>
-        Wisdom Finder
+    <nav className="w-full px-6 py-4 flex justify-between items-center bg-white shadow">
+      <div>
+        <Link href="/" className="text-xl font-bold">Wisdom Finder</Link>
       </div>
-      <div className="flex space-x-6 text-lg font-medium">
-        <button onClick={() => router.push('/')} className="hover:text-red-500 cursor-pointer">Home</button>
-        <button onClick={() => router.push('/all-articles')} className="hover:text-red-500 cursor-pointer">All Articles</button>
-        <button onClick={() => router.push('/create')} className="hover:text-red-500 cursor-pointer">Create Articles</button>
-        <button onClick={() => router.push('/sign-in')} className="hover:text-red-500 cursor-pointer">Sign In</button>
-        <button onClick={() => router.push('/sign-up')} className="hover:text-red-500 cursor-pointer">Sign Up</button>
-        <div>
-          <UserButton/>
-        </div>
+      <div className="flex gap-4 items-center">
+        <Link href="/all-articles" className="hover:underline">Articles</Link>
+
+        {user && (
+          <Link href="/dashboard" className="hover:underline font-medium">
+            Dashboard
+          </Link>
+        )}
+
+        {!user ? (
+          <Link href="/sign-in" className="hover:underline text-blue-600">
+            Sign In
+          </Link>
+        ) : (
+          <Link href="/sign-out" className="hover:underline text-red-500">
+            Sign Out
+          </Link>
+        )}
+        <UserButton/>
       </div>
     </nav>
   );

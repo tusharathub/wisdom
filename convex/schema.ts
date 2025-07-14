@@ -16,11 +16,11 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
     authorId: v.string(),
-    userId: v.string(),
+    // userId: v.string(),
     username: v.string(),
     likes: v.array(v.string()),
     tags: v.optional(v.array(v.string())),
-  }),
+  }).index("by_authorId", ["authorId"]),
 
   likes: defineTable({
     articleId: v.id("articles"),
