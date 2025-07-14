@@ -126,3 +126,52 @@ export const getMyArticlesWithStats = query({
     return withStats;
   }
 })
+
+export const deleteArticle = mutation({
+  args: {
+    articleId: v.id("articles"),
+  },
+  handler: async (ctx, { articleId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const article = await ctx.db.get(articleId);
+    if (!article) throw new Error("Article not found");
+
+    if (article.authorId !== identity.subject) {
+      throw new Error("Unauthorized");
+    }
+
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("byArticle", (q) => q.eq("articleId", articleId))
+      .collect();
+
+    for (const comment of comments) {
+      // delete replies to each comment
+      const replies = await ctx.db
+        .query("replyOnComment")
+        .withIndex("by_commentId", (q) => q.eq("commentId", comment._id))
+        .collect();
+
+      for (const reply of replies) {
+        await ctx.db.delete(reply._id);
+      }
+
+      await ctx.db.delete(comment._id);
+    }
+
+    // delete likes on the article
+    const likes = await ctx.db
+      .query("likes")
+      .withIndex("byArticle", (q) => q.eq("articleId", articleId))
+      .collect();
+
+    for (const like of likes) {
+      await ctx.db.delete(like._id);
+    }
+
+    //  delete the article
+    await ctx.db.delete(articleId);
+  },
+});

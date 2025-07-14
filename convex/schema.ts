@@ -24,10 +24,13 @@ export default defineSchema({
 
   likes: defineTable({
     articleId: v.id("articles"),
+    commentId : v.optional(v.id("comments")),
     userId: v.string(),
   })
     .index("byArticle", ["articleId"])
-    .index("byUserArticle", ["userId", "articleId"]),
+    .index("byCommentsId", ["commentId"])
+    .index("byUserArticle", ["userId", "articleId"])
+    .index("byUserComment", ["userId", "commentId"]),
 
   comments: defineTable({
     articleId: v.id("articles"),
@@ -44,7 +47,9 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
     username: v.optional(v.string()),
-  }).index("by_commentId", ["commentId"]),
+  })
+  // .index("byComment", ["commentId"])
+  .index("by_commentId", ["commentId"]),
 
   likesOnComment: defineTable({
     commentId: v.id("comments"),
