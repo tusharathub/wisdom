@@ -8,7 +8,7 @@ import Link from "next/link";
 export default function DashBoardPage() {
     const { user} = useUser();
 
-    const myArticles = useQuery(api.articles.getMyArticles, {
+    const articleWithStats = useQuery(api.articles.getMyArticlesWithStats, {
         authorId : user?.id || "",
     })
 
@@ -29,13 +29,13 @@ export default function DashBoardPage() {
 
             <h2 className="text-2xl font-semibold mb-4"> Your Articles</h2>
 
-            {!myArticles? (
+            {!articleWithStats? (
                 <p> Loading articles....</p>
-            ): myArticles.length === 0 ?(
+            ): articleWithStats.length === 0 ?(
                 <p>You haven't shared your Wisdom yet</p>
             ) :(
                 <div className="space-y-4">
-                    {myArticles.map((article) => (
+                    {articleWithStats.map((article) => (
                         <Link
                         key={article._id}
                         className="block bg-gray-100 shadow p-4 rounded hover:bg-gray-50"
@@ -43,6 +43,11 @@ export default function DashBoardPage() {
                         >
                             <h3 className="text-xl font-medium"> {article.title} </h3>
                             <p className="text-gray-600 line-clamp-2"> {article.content} </p>
+
+                            <div className="mt-2 text-sm text-gray-600 flex gap-4">
+                                <span> {article.likeCount} likes </span>
+                                <span> {article.commentCount} comments </span>
+                            </div>
                         </Link>
                     ))}
                 </div>

@@ -93,3 +93,36 @@ export const getMyArticles = query({
     .collect()
   }
 })
+
+export const getMyArticlesWithStats = query({
+  args : {authorId : v.string()} ,
+  handler: async (ctx, {authorId}) => {
+
+    const articles = await ctx.db
+    .query("articles")
+    .filter((q) => q.eq(q.field("authorId"), authorId))
+    .collect()
+
+    const withStats = await Promise.all(
+      articles.map(async(article) => {
+
+        const likes = await ctx.db
+        .query("likes")
+        .filter((q) => q.eq(q.field("articleId"), article._id))
+        .collect();
+
+        const comments = await ctx.db
+        .query("comments")
+        .filter((q)=> q.eq(q.field("articleId"), article._id))
+        .collect();
+
+        return {
+          ...article,
+          likeCount : likes.length,
+          commentCount: comments.length,
+        }
+      })
+    )
+    return withStats;
+  }
+})
