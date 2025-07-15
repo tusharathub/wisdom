@@ -1,7 +1,6 @@
 // import { v } from "convex/values";
 // import { mutation, query } from "./_generated/server";
 
-
 // export const getLikes = query({
 //   args: {articleId : v.id("articles")},
 //   handler: async (ctx, {articleId}) => {
@@ -10,7 +9,7 @@
 //     .withIndex("byArticle", (q)=> q.eq("articleId", articleId) )
 //     .collect();
 //     return likes.length;
-//   }  
+//   }
 // });
 
 // export const hasLiked = query({
@@ -55,31 +54,31 @@
 //   }
 // })
 
-
-import { mutation, query } from './_generated/server';
-import { v } from 'convex/values';
+import { api } from "./_generated/api";
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
 
 export const getLikes = query({
-  args: { articleId: v.id('articles') },
+  args: { articleId: v.id("articles") },
   handler: async (ctx, { articleId }) => {
     const likes = await ctx.db
-      .query('likes')
-      .withIndex('byArticle', (q) => q.eq('articleId', articleId))
+      .query("likes")
+      .withIndex("byArticle", (q) => q.eq("articleId", articleId))
       .collect();
     return likes.length;
   },
 });
 
 export const hasLiked = query({
-  args: { articleId: v.id('articles') },
+  args: { articleId: v.id("articles") },
   handler: async (ctx, { articleId }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return false;
 
     const like = await ctx.db
-      .query('likes')
-      .withIndex('byUserArticle', (q) =>
-        q.eq('userId', identity.subject).eq('articleId', articleId)
+      .query("likes")
+      .withIndex("byUserArticle", (q) =>
+        q.eq("userId", identity.subject).eq("articleId", articleId)
       )
       .unique();
 
@@ -88,22 +87,41 @@ export const hasLiked = query({
 });
 
 export const like = mutation({
-  args: { articleId: v.id('articles') },
+  args: { articleId: v.id("articles") },
   handler: async (ctx, { articleId }) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error('Still Not authenticated');
+    if (!identity) throw new Error("Still Not authenticated");
 
     const alreadyLiked = await ctx.db
-      .query('likes')
-      .withIndex('byUserArticle', (q) =>
-        q.eq('userId', identity.subject).eq('articleId', articleId)
+      .query("likes")
+      .withIndex("byUserArticle", (q) =>
+        q.eq("userId", identity.subject).eq("articleId", articleId)
       )
       .unique();
 
     if (!alreadyLiked) {
-      await ctx.db.insert('likes', {
+      await ctx.db.insert("likes", {
         articleId,
         userId: identity.subject,
+      });
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    const username = user?.username ?? "Anonymous";
+
+    //notification on like
+    const article = await ctx.db.get(articleId);
+    if (!article) throw new Error("article not found");
+    if (article?.authorId !== identity.subject) {
+      await ctx.runMutation(api.notification.createNotification, {
+        recipientId: article.authorId,
+        type: "like",
+        articleId,
+        senderUsername: username,
       });
     }
   },
@@ -144,7 +162,6 @@ export const toggleCommentLike = mutation({
 //   }
 // })
 
-
 export const getAllCommentLikes = query({
   args: { articleId: v.id("articles") },
   handler: async (ctx, { articleId }) => {
@@ -153,13 +170,8 @@ export const getAllCommentLikes = query({
       .withIndex("byArticle", (q) => q.eq("articleId", articleId))
       .collect();
 
-    const likes = await ctx.db
-      .query("likesOnComment")
-      .collect();
+    const likes = await ctx.db.query("likesOnComment").collect();
 
-    return likes.filter((l) =>
-      comments.some((c) => c._id === l.commentId)
-    );
+    return likes.filter((l) => comments.some((c) => c._id === l.commentId));
   },
 });
-

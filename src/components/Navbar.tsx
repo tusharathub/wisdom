@@ -15,6 +15,16 @@ export default function Navbar() {
         <Link href="/all-articles" className="hover:underline">Articles</Link>
 
         {user && (
+          <Link href="/create" className="hover:underline font-medium">
+            Create
+          </Link>
+        )}
+        {user && (
+          <Link href="/notifications" className="hover:underline font-medium">
+            Notifications
+          </Link>
+        )}
+        {user && (
           <Link href="/dashboard" className="hover:underline font-medium">
             Dashboard
           </Link>

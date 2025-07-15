@@ -1,3 +1,4 @@
+import { api } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -40,6 +41,21 @@ export const addComment = mutation({
       createdAt: Date.now(),
       username,
     });
+
+    
+//notification on comment
+    const article = await ctx.db.get(articleId);
+    if(!article) throw new Error("article not found")
+    if(article?.authorId !== identity.subject) {
+       await ctx.runMutation(api.notification.createNotification, {
+        recipientId: article.authorId,
+        type: "comment",
+        articleId,
+        senderUsername: username,
+       })
+    }
+    
+    
   },
 });
 
