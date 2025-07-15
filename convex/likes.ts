@@ -123,7 +123,10 @@ export const like = mutation({
         articleId,
         senderUsername: username,
       });
+  
     }
+
+
   },
 });
 

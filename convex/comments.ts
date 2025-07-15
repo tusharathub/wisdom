@@ -41,7 +41,6 @@ export const addComment = mutation({
       createdAt: Date.now(),
       username,
     });
-
     
 //notification on comment
     const article = await ctx.db.get(articleId);
@@ -53,9 +52,7 @@ export const addComment = mutation({
         articleId,
         senderUsername: username,
        })
-    }
-    
-    
+    }      
   },
 });
 

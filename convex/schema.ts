@@ -58,12 +58,12 @@ export default defineSchema({
   }).index("by_comment_user", ["commentId", "userId"]),
 
   notification : defineTable({
-    recipientId : v.string(), //usreId of article owner
+    recipientId : v.string(), //userId of article owner
     articleId : v.id("articles"),
     type: v.union(v.literal("like"), v.literal("comment")) ,
     senderUsername: v.string(),
     createdAt: v.number(),
-    read: v.optional(v.boolean()),
+    read: v.boolean(),
   })
   .index("by_recipient", ["recipientId"])
 });

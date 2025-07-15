@@ -31,6 +31,8 @@ export default function ArticleDetailPage() {
   const hasLiked = useQuery(api.likes.hasLiked, { articleId });
   const comments = useQuery(api.comments.getComments, { articleId });
 
+  
+
   const like = useMutation(api.likes.like);
   const addComment = useMutation(api.comments.addComment);
   const deleteComment = useMutation(api.comments.deleteComment);
