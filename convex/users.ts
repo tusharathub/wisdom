@@ -1,5 +1,9 @@
-import { mutation } from "./_generated/server";
+// import { ClerkClient } from "@clerk/backend";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
+
+
 
 export const syncUser = mutation({
   args: {
@@ -68,3 +72,10 @@ export const saveUser = mutation({
     }
   }
 })
+
+// export const getUserById = query({
+//   args: {userId : v.string()},
+//   handler: async (ctx, {userId}) => {
+//     const user = await ClerkClient.
+//   }
+// })

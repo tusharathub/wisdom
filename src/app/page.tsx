@@ -24,7 +24,7 @@ export default function Home() {
 
   const articles = useQuery(api.articles.searchArticles, {
     query: debouncedQuery,
-    limit: 5,
+    limit: 4,
   });
 
   const handeViewAllClick = () => {
@@ -67,7 +67,7 @@ export default function Home() {
                  onClick={() => router.push(`/read/${article._id}`)}
                 >
                   <h3 className="text-xl font-medium">{article.title}</h3>
-                  <p className="text-gray-600 line-clamp-2 text-sm">
+                  <p className="text-gray-600 line-clamp-2 text-l">
                     {article.content}
                   </p>
                 </li>
@@ -89,7 +89,6 @@ export default function Home() {
          
         </div>
       )
-
       }
     </div>
   );

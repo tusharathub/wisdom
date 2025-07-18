@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/nextjs": "^6.23.3",
     "@convex-dev/auth": "^0.0.87",
     "convex": "^1.25.4",
