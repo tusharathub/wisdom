@@ -23,7 +23,7 @@ export const createArticle = mutation({
       content,
       createdAt: Date.now(),
       authorId: identity.subject,
-      userId: identity.subject,
+      // userId: identity.subject,
       username,
       likes: [],
       tags: tags ?? [],
@@ -181,7 +181,7 @@ export const getArticleByUserId = query({
   handler: async (ctx, args) => {
     return await ctx.db
     .query("articles")
-    .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+    .withIndex("by_authorId", (q) => q.eq("authorId", args.userId))
     .order("desc")
     .collect();
   }

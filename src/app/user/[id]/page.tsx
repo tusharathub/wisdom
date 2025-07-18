@@ -1,52 +1,42 @@
 "use client"
 import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { api } from "../../../../convex/_generated/api";
-import { Id } from "../../../../convex/_generated/dataModel";
-
-
 
 export default function UserProfilePage() {
-    const {id} = useParams();
-    const [clerkUser, setClerkUser] = useState<any>(null);
+  const { id } = useParams();
 
-    // const { id } = useParams();
-    //   if(!id || id === "null") return <p>Invalid Article ID</p>
-    //   const articleId = id as Id<"articles">;
-    // const article = useQuery(api.articles.getArticleById, { id: articleId });
-    
+  if (!id || id === "null") return <p>Invalid user ID</p>;
 
-    const articles = useQuery(api.articles.getArticleByUserId, {
-        userId: id as string,
-    })
+  const articles = useQuery(api.articles.getArticleByUserId, {
+    userId: id as string,
+  });
 
-    // useEffect(() => {
-    //     async function fetchUser() {
-    //         const res = await fetch(`api/`)
-    //     }
-    // })
+  return (
+    <div className="max-w-4xl mx-auto py-10">
+      <div className="mb-10 bg-gray-100 shadow rounded p-6">
+        <h1 className="text-3xl font-bold mb-4">
+          By @{articles?.[0]?.username || "Unknown"}
+        </h1>
+        <p className="text-gray-700">Total Articles: {articles?.length || 0}</p>
+      </div>
 
-    return (
-        <div className="max-w-4xl mx-auto py-10">
-
-
-            {/* //article  */}
-            <div className="space-y-4">
-                {articles ? (
-                    articles.map((a) => (
-                        <div key={a._id} className="border p-4 rounded bg-gray-100 shadow">
-                            <h3 className=" text-xl font-bold"> {a.title} </h3>
-                            <p className="text-gray-900 line-clamp-3"> {a.content} </p>
-                            <p className="text-sm text-gray-700 mt-2">
-                                posted on {new Date(a._creationTime).toLocaleDateString()}
-                            </p>
-                        </div>
-                    ))
-                ) : (
-                    <p>Loading articles by </p>
-                )}
+      {/* Articles list */}
+      <div className="space-y-4">
+        {articles ? (
+          articles.map((a) => (
+            <div key={a._id} className="border p-4 rounded bg-gray-100 shadow">
+              <h3 className="text-xl font-bold">{a.title}</h3>
+              <p className="text-gray-900 line-clamp-3">{a.content}</p>
+              <p className="text-sm text-gray-700 mt-2">
+                posted on {new Date(a._creationTime).toLocaleDateString()}
+              </p>
             </div>
-        </div>
-    )
+          ))
+        ) : (
+          <p>Loading articles...</p>
+        )}
+      </div>
+    </div>
+  );
 }

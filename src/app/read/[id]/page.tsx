@@ -57,7 +57,7 @@ export default function ArticleDetailPage() {
       <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
       <p className="text-gray-500 text-xl mb-6 hover:text-gray-900">
         by
-        <Link href={`/user/${article.userId}`}> @{article.username}</Link>
+        <Link href={`/user/${article.authorId}`}> @{article.username}</Link>
       </p>
 
       <p className="text-gray-700 whitespace-pre-wrap text-lg mb-8">

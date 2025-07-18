@@ -10,18 +10,17 @@ export default defineSchema({
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_email", ["email"]),
+articles: defineTable({
+  title: v.string(),
+  content: v.string(),
+  createdAt: v.number(),
+  authorId: v.string(),        // ✅ KEEP THIS
+  username: v.string(),
+  likes: v.array(v.string()),
+  tags: v.optional(v.array(v.string())),
+})
+.index("by_authorId", ["authorId"]), // ✅ KEEP THIS
 
-  articles: defineTable({
-    title: v.string(),
-    content: v.string(),
-    createdAt: v.number(),
-    authorId: v.string(),
-    userId: v.string(),
-    username: v.string(),
-    likes: v.array(v.string()),
-    tags: v.optional(v.array(v.string())),
-  }).index("by_userId", ["userId"])
-  .index("by_authorId", ["authorId"]),
 
   likes: defineTable({
     articleId: v.id("articles"),
