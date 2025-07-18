@@ -1,19 +1,27 @@
 'use client';
+
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function AllArticlesPage() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
-  const [visibleCount, setVisibleCount] = useState(10); 
+  const searchParams = useSearchParams();
+
+  const initialQuery = searchParams.get("query") || "";
+  const [search, setSearch] = useState(initialQuery);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialQuery);
+  const [visibleCount, setVisibleCount] = useState(10);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedSearch(search);
-      setVisibleCount(10); 
+      const params = new URLSearchParams();
+      if (search) params.set("query", search);
+      else params.delete("query");
+      router.push(`/all-articles?${params.toString()}`);
+      setVisibleCount(10); // Reset visible on new search
     }, 300);
     return () => clearTimeout(timeout);
   }, [search]);
@@ -43,7 +51,7 @@ export default function AllArticlesPage() {
         {!articles && <p className="text-center mt-8">Loading...</p>}
         {articles?.length === 0 && (
           <p className="text-center text-gray-600">
-            No results found for "{search}"
+            No results found for "{debouncedSearch}"
           </p>
         )}
         {visibleArticles?.map((article) => (
