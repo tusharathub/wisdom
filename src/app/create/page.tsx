@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
 import React, { useState } from "react";
 
-export default function createPage() {
+export default function CreatePage() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
   const createArticle = useMutation(api.articles.createArticle);
@@ -24,7 +24,7 @@ export default function createPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !content.trim) {
+    if (!title.trim() || !content.trim()) {
       setError("Title and Content both are required");
       return;
     }

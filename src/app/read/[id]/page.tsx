@@ -6,6 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import { useState } from "react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
+import Link from "next/link";
 
 function formatTimeAgo(timestamp: number): string {
   const diff = Date.now() - timestamp;
@@ -22,6 +23,7 @@ function formatTimeAgo(timestamp: number): string {
 
 export default function ArticleDetailPage() {
   const { id } = useParams();
+  if (!id || id === "null") return <p>Invalid Article ID</p>;
   const articleId = id as Id<"articles">;
 
   const { user } = useUser();
@@ -30,8 +32,6 @@ export default function ArticleDetailPage() {
   const likeCount = useQuery(api.likes.getLikes, { articleId });
   const hasLiked = useQuery(api.likes.hasLiked, { articleId });
   const comments = useQuery(api.comments.getComments, { articleId });
-
-  
 
   const like = useMutation(api.likes.like);
   const addComment = useMutation(api.comments.addComment);
@@ -46,14 +46,19 @@ export default function ArticleDetailPage() {
 
   const [commentInput, setCommentInput] = useState("");
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
-  const [showReplyBoxes, setShowReplyBoxes] = useState<Record<string, boolean>>({});
+  const [showReplyBoxes, setShowReplyBoxes] = useState<Record<string, boolean>>(
+    {}
+  );
 
   if (!article) return <p className="p-6">Loading article...</p>;
 
   return (
     <div className="max-w-4xl mx-auto p-10 mt-10 bg-white rounded shadow">
       <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
-      <p className="text-gray-500 text-sm mb-6">by {article.username}</p>
+      <p className="text-gray-500 text-xl mb-6 hover:text-gray-900">
+        by
+        <Link href={`/user/${article.userId}`}> @{article.username}</Link>
+      </p>
 
       <p className="text-gray-700 whitespace-pre-wrap text-lg mb-8">
         {article.content}{" "}

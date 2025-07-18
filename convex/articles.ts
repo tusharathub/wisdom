@@ -23,7 +23,7 @@ export const createArticle = mutation({
       content,
       createdAt: Date.now(),
       authorId: identity.subject,
-      // userId: identity.subject,
+      userId: identity.subject,
       username,
       likes: [],
       tags: tags ?? [],
@@ -175,3 +175,14 @@ export const deleteArticle = mutation({
     await ctx.db.delete(articleId);
   },
 });
+
+export const getArticleByUserId = query({
+  args: {userId : v.string()},
+  handler: async (ctx, args) => {
+    return await ctx.db
+    .query("articles")
+    .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+    .order("desc")
+    .collect();
+  }
+})

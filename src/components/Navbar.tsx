@@ -9,10 +9,9 @@ import { useEffect } from "react";
 export default function Navbar() {
   const { user } = useUser();
 
-  const notifications = useQuery(api.notification.getAllForUserNotification,{
-    userId : user?.id ?? ""
+  const notifications = useQuery(api.notification.getAllForUserNotification, {
+    userId: user?.id ?? "",
   });
-
 
   return (
     <nav className="w-full px-6 py-4 flex justify-between items-center bg-white shadow">
@@ -37,10 +36,9 @@ export default function Navbar() {
               className="relative hover:underline font-medium"
             >
               Notifications
-            {notifications && notifications.some(n => !n.read) && (
-  <span className="absolute top-0 right-[-8px] h-2 w-2 bg-red-600 rounded-full" />
-)}
-
+              {notifications && notifications.some((n) => !n.read) && (
+                <span className="absolute top-0 right-[-8px] h-2 w-2 bg-red-600 rounded-full" />
+              )}
             </Link>
 
             <Link href="/dashboard" className="hover:underline font-medium">

@@ -10,7 +10,6 @@ import { useEffect } from "react";
 export default function AllArticlesPage() {
 
   const router = useRouter();
-  
 
   const articles = useQuery(api.articles.searchArticles, {
     query: "",
@@ -23,6 +22,13 @@ export default function AllArticlesPage() {
     <div className="min-h-screen p-8 bg-gray-100 text-gray-900">
       
       <h1 className="text-4xl font-bold mb-6 text-center">All Wisdom</h1>
+       <div className="flex justify-center mb-4 gap-4 relative">
+        <input
+          className="px-4 py-3 border border-gray-500 text-2xl rounded-2xl w-1/2"
+          type="text"
+          placeholder="Search wisdom..."
+        />
+      </div>
       <ul className="max-w-3xl mx-auto space-y-4">
         {articles.map((article) => (
           <li
@@ -33,6 +39,7 @@ export default function AllArticlesPage() {
           >
             <h3 className="text-2xl font-semibold">{article.title}</h3>
             <p className="text-gray-700 mt-2">{article.content}</p>
+            
           </li>
           
         ))}
