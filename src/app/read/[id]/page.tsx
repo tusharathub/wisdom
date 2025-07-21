@@ -37,7 +37,9 @@ export default function ArticleDetailPage() {
   const addComment = useMutation(api.comments.addComment);
   const deleteComment = useMutation(api.comments.deleteComment);
   const toggleCommentLike = useMutation(api.likes.toggleCommentLike);
-  const addReply = useMutation(api.comments.addReply);
+  const addReply = useMutation(api.comments.replyToComment);
+
+  const deleteReply = useMutation(api.comments.deleteReply);
 
   const replies = useQuery(api.comments.getRepliesByArticle, { articleId });
   const commentLikes = useQuery(api.likes.getAllCommentLikes, { articleId });
@@ -117,20 +119,24 @@ export default function ArticleDetailPage() {
             const isOwner = c.userId === user?.id;
             const timeAgo = formatTimeAgo(c.createdAt);
             const commentReplies = replies?.filter(
-              (r) => r.commentId === c._id
+              (r) => r.parentCommentId === c._id
             );
             const likesOnComment = commentLikes?.filter(
               (l) => l.commentId === c._id
             );
             const repliesForComment =
-              replies?.filter((r) => r.commentId === c._id) ?? [];
+              replies?.filter((r) => r.parentCommentId === c._id) ?? [];
 
             return (
               <div key={c._id} className="bg-gray-100 p-4 rounded relative">
                 <div className="flex justify-between mb-1">
-                  <span className="text-sm font-semibold text-gray-800">
+                  <Link
+                    href={`/user/${c.userId}`}
+                    className="text-sm font-semibold text-blue-700 hover:underline"
+                  >
                     {c.username || "Anonymous"}
-                  </span>
+                  </Link>
+
                   <span className="text-xs text-gray-500">{timeAgo}</span>
                 </div>
 
@@ -178,9 +184,11 @@ export default function ArticleDetailPage() {
                 {showReplyBoxes[c._id] && user && (
                   <form
                     onSubmit={async (e) => {
+                      e.preventDefault();
                       if (!replyInputs[c._id]?.trim()) return;
                       await addReply({
-                        commentId: c._id,
+                        articleId, // ✅ Fix: added this
+                        parentCommentId: c._id,
                         content: replyInputs[c._id],
                         username: user.username || "anonymous reply",
                       });
@@ -217,14 +225,42 @@ export default function ArticleDetailPage() {
                         key={r._id}
                         className="bg-white p-2 rounded shadow-sm"
                       >
-                        <div className="flex justify-between">
+                        {/* <div className="flex justify-between">
                           <span className="text-sm font-semibold text-gray-800">
                             {r.username || "Anonymous"}
                           </span>
                           <span className="text-xs text-gray-500">
                             {formatTimeAgo(r.createdAt)}
                           </span>
+                        </div> */}
+                        <div className="flex justify-between items-center">
+                          <Link
+                            href={`/user/${r.userId}`}
+                            className="text-sm font-semibold text-blue-700 hover:underline"
+                          >
+                            @{r.username || "Anonymous"}
+                          </Link>
+
+                          <div className="flex gap-2 items-center">
+                            <span className="text-xs text-gray-500">
+                              {formatTimeAgo(r.createdAt)}
+                            </span>
+
+                            {r.userId === user?.id && (
+                              <button
+                                onClick={async () => {
+                                  if (confirm("Delete this reply?")) {
+                                    await deleteReply({ replyId: r._id }); // 👈 uses correct type now
+                                  }
+                                }}
+                                className="text-xs text-red-500 hover:underline"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
                         </div>
+
                         <p className="text-gray-800 text-sm mt-1">
                           {r.content}
                         </p>

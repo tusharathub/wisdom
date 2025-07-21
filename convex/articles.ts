@@ -151,7 +151,7 @@ export const deleteArticle = mutation({
       // delete replies to each comment
       const replies = await ctx.db
         .query("replyOnComment")
-        .withIndex("by_commentId", (q) => q.eq("commentId", comment._id))
+        .withIndex("by_commentId", (q) => q.eq("parentCommentId", comment._id))
         .collect();
 
       for (const reply of replies) {

@@ -3,27 +3,33 @@ import { mutation, query } from "./_generated/server";
 
 
 
-
 export const createNotification = mutation({
-    args: {
-        recipientId : v.string(),
-        type: v.union(v.literal("like"), v.literal("comment")),
-        articleId : v.id("articles"),
-        senderUsername: v.string(),
-    },
-    handler: async (ctx, {recipientId, type, articleId, senderUsername}) => {
-        await ctx.db.insert("notification", {
-            recipientId,
-            type,
-            articleId,
-            senderUsername,
-            createdAt: Date.now(),
-            read: false,
-        })
-
-        
-    }
-})
+  args: {
+    recipientId: v.string(),
+    type: v.union(v.literal("like"), v.literal("comment"), v.literal("reply")),
+    articleId: v.id("articles"),
+    senderUsername: v.string(),
+    senderId: v.optional(v.string()),
+    commentId: v.optional(v.id("comments")),
+    commentContent: v.optional(v.string()),
+  },
+  handler: async (
+    ctx,
+    { recipientId, type, articleId, senderUsername, senderId, commentId, commentContent }
+  ) => {
+    await ctx.db.insert("notification", {
+      recipientId,
+      type,
+      articleId,
+      senderUsername,
+      senderId,
+      commentId,
+      commentContent,
+      createdAt: Date.now(),
+      read: false,
+    });
+  },
+});
 
 export const getMyNotifications = query({
     args : {userId : v.string()},
@@ -35,6 +41,8 @@ export const getMyNotifications = query({
         .take(20)
     }
 })
+
+
 
 // export const getUnreadNotificationCount = query({
 //   args: { userId: v.string() },
@@ -99,5 +107,26 @@ export const markAllAsRead = mutation({
       for(const notif of notification) {
         await ctx.db.patch(notif._id, {read: true})
       }
+  },
+});
+
+export const insertNotification = mutation({
+  args: {
+    recipientId: v.string(),
+    senderId: v.string(),
+    senderUsername: v.string(),
+    type: v.union(v.literal("like"), v.literal("reply")),
+    commentId: v.id("comments"),
+    commentContent: v.string(),
+    articleId: v.id("articles"),
+  },
+  handler: async (ctx, args) => {
+    if (args.recipientId === args.senderId) return; // don't notify self
+
+    await ctx.db.insert("notification", {
+      ...args,
+      createdAt: Date.now(),
+      read: false,
+    });
   },
 });

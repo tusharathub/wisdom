@@ -42,14 +42,15 @@ articles: defineTable({
   // .index("by_articleId", ["articleId"]),
 
   replyOnComment: defineTable({
-    commentId: v.id("comments"),
+    parentCommentId: v.id("comments"),
     userId: v.string(),
+    articleId : v.id("articles"),
     content: v.string(),
     createdAt: v.number(),
     username: v.optional(v.string()),
   })
   // .index("byComment", ["commentId"])
-  .index("by_commentId", ["commentId"]),
+  .index("by_commentId", ["parentCommentId"]),
 
   likesOnComment: defineTable({
     commentId: v.id("comments"),
@@ -60,10 +61,13 @@ articles: defineTable({
   notification : defineTable({
     recipientId : v.string(), //userId of article owner
     articleId : v.id("articles"),
-    type: v.union(v.literal("like"), v.literal("comment")) ,
+    type: v.union(v.literal("like"), v.literal("comment"), v.literal("reply")) ,
     senderUsername: v.string(),
     createdAt: v.number(),
     read: v.boolean(),
+    senderId : v.optional(v.string()),
+    commentId : v.optional(v.id("comments")),
+    commentContent: v.optional(v.string()),
   })
   .index("by_recipient", ["recipientId"])
 });
