@@ -1,6 +1,60 @@
+import { paginationOptsValidator } from "convex/server";
 import { api } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
+
+export const listComments = query({
+  args: { paginationOpts: paginationOptsValidator, articleId: v.id("articles") },
+  handler: async (ctx, { paginationOpts, articleId }) => {
+    return await ctx.db
+      .query("comments")
+      .withIndex("byArticle", q => q.eq("articleId", articleId))
+      .order("desc")
+      .paginate(paginationOpts);
+  },
+});
+
+export const listReplies = query({
+  args: { paginationOpts: paginationOptsValidator, parentCommentId: v.id("comments") },
+  handler: async (ctx, { paginationOpts, parentCommentId }) => {
+    return await ctx.db
+      .query("comments")
+      .withIndex("byParent", q => q.eq("parentCommentId", parentCommentId))
+      .order("asc")
+      .paginate(paginationOpts);
+  },
+});
+
+export const getPaginatedComments = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    articleId: v.id("articles"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("comments")
+      .withIndex("byArticle", (q) => q.eq("articleId", args.articleId))
+      .filter((q) => q.eq(q.field("parentCommentId"), undefined)) // top-level only
+      .order("desc")
+      .paginate(args.paginationOpts);
+  },
+});
+
+export const getPaginatedReplies = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    parentCommentId: v.id("comments"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("comments")
+      .filter((q) => q.eq(q.field("parentCommentId"), args.parentCommentId))
+      .order("asc")
+      .paginate(args.paginationOpts);
+  },
+});
+
 
 export const getComments = query({
   args: {
@@ -18,6 +72,7 @@ export const getComments = query({
       return allElements;
   },
 });
+
 
 export const addComment = mutation({
   args: {
@@ -141,6 +196,30 @@ export const getReply = query({
   },
 });
 
+// export const getReplies = query({
+//   args: {
+//     parentCommentId: v.id("comments"),
+//     cursor: v.optional(v.string()),
+//     limit: v.optional(v.number()),
+//   },
+//   handler: async (ctx, { parentCommentId, cursor, limit = 5 }) => {
+//     let q = ctx.db
+//       .query("comments")
+//       .withIndex("byParent", (q) => q.eq("parentCommentId", parentCommentId))
+//       .order("asc");
+
+//     const paginationResult = await q.paginate({ cursor : cursor ?? null, }, 10);
+
+//     const replies = await q.take(limit);
+
+//     return {
+//       replies: paginationResult.page,
+//       nextCursor: paginationResult.continueCursor ?? null,
+//     };
+//   },
+// });
+
+
 export const getRepliesByArticle = query({
   args: { articleId: v.id("articles") },
   handler: async (ctx, { articleId }) => {
@@ -161,5 +240,91 @@ export const deleteReply = mutation({
   args: { replyId: v.id("replyOnComment") },
   handler: async (ctx, { replyId }) => {
     await ctx.db.delete(replyId);
+  },
+});
+
+export const getAllCommentsWithLikes = query({
+  args: { articleId: v.id("articles") },
+  handler: async (ctx, { articleId }) => {
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("byArticle", q => q.eq("articleId", articleId))
+      .collect();
+
+    const allLikes = await ctx.db.query("likesOnComment").collect();
+
+    const likedComments = comments.map(comment => {
+      const likeCount = allLikes.filter(l => l.commentId === comment._id).length;
+      return { ...comment, likeCount };
+    });
+
+    return likedComments;
+  },
+});
+
+export const getCommentsByRecent = query({
+  args: {
+    articleId: v.id("articles"),
+    limit: v.number(),
+  },
+  handler: async (ctx, { articleId }) => {
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("byArticle", (q) => q.eq("articleId", articleId))
+      .order("desc")
+      .collect();
+
+    return comments;
+  },
+});
+
+export const getCommentsByLikes = query({
+  args: {
+    articleId: v.id("articles"),
+    limit: v.number(),
+    cursor: v.optional(v.string()), 
+  },
+  handler: async (ctx, { articleId, limit, cursor }) => {
+    const allComments = await ctx.db
+      .query("comments")
+      .withIndex("byArticle", (q) => q.eq("articleId", articleId))
+      .collect();
+
+    const topLevelComments = allComments.filter(
+      (comment) => comment.parentCommentId === undefined
+    );
+
+    const commentIds = topLevelComments.map((c) => c._id);
+    const allLikes = await ctx.db.query("likesOnComment").collect();
+
+    const likeCounts: Record<string, number> = {};
+    for (const like of allLikes) {
+      const id = like.commentId;
+      likeCounts[id] = (likeCounts[id] || 0) + 1;
+    }
+
+    const sorted = topLevelComments.sort((a, b) => {
+      const likeDiff =
+        (likeCounts[b._id] || 0) - (likeCounts[a._id] || 0);
+      if (likeDiff !== 0) return likeDiff;
+      return b.createdAt - a.createdAt;
+    });
+
+    let start = 0;
+    if (cursor) {
+      const index = sorted.findIndex((c) => c._id === cursor);
+      if (index !== -1) start = index + 1;
+    }
+
+    const paginated = sorted.slice(start, start + limit);
+    const nextCursor =
+      paginated.length === limit
+        ? paginated[paginated.length - 1]._id
+        : null;
+
+    return {
+      comments: paginated,
+      nextCursor,
+    };
   },
 });

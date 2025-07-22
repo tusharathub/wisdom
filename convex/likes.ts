@@ -112,7 +112,6 @@ export const like = mutation({
       .unique();
 
     const username = user?.username ?? "Anonymous";
-
     //notification on like
     const article = await ctx.db.get(articleId);
     if (!article) throw new Error("article not found");
@@ -123,10 +122,7 @@ export const like = mutation({
         articleId,
         senderUsername: username,
       });
-  
     }
-
-
   },
 });
 
@@ -155,15 +151,15 @@ export const toggleCommentLike = mutation({
   },
 });
 
-// export const getCommentLikes =  query({
-//   args: {commentId : v.id("comments")},
-//   handler : async (ctx, {commentId}) => {
-//     return await ctx.db
-//     .query("likesOnComment")
-//     .withIndex("by_comment_user", (q) => q.eq("commentId", commentId))
-//     .collect();
-//   }
-// })
+export const getCommentLikes =  query({
+  args: {commentId : v.id("comments")},
+  handler : async (ctx, {commentId}) => {
+    return await ctx.db
+    .query("likesOnComment")
+    .withIndex("by_comment_user", (q) => q.eq("commentId", commentId))
+    .collect();
+  }
+})
 
 export const getAllCommentLikes = query({
   args: { articleId: v.id("articles") },

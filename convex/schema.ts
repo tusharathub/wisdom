@@ -40,7 +40,9 @@ articles: defineTable({
     username: v.optional(v.string()),
     parentCommentId : v.optional(v.id("comments")),
   }).index("byArticle", ["articleId"])
-  .index("byParent", ["parentCommentId"]),
+  .index("byParent", ["parentCommentId"])
+   .index("byArticleCreatedAt", ["articleId", "createdAt"]),
+    // .index("byArticleId", ["articleId"]),
 
   replyOnComment: defineTable({
     parentCommentId: v.id("comments"),
