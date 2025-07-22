@@ -21,17 +21,174 @@ function formatTimeAgo(timestamp: number): string {
   return `Just now`;
 }
 
+function buildCommentTree(comments: any[]) {
+  const commentMap: Record<string, any> = {};
+  const roots: any[] = [];
+
+  comments.forEach((c) => (commentMap[c._id] = { ...c, children: [] }));
+
+  comments.forEach((c) => {
+    if (c.parentCommentId) {
+      commentMap[c.parentCommentId]?.children.push(commentMap[c._id]);
+    } else {
+      roots.push(commentMap[c._id]);
+    }
+  });
+  return roots;
+}
+
+function CommentNode({
+  comment,
+  articleId,
+  user,
+  addReply,
+  deleteComment,
+  toggleCommentLike,
+  likes,
+  replyInputs,
+  setReplyInputs,
+  showReplyBoxes,
+  setShowReplyBoxes,
+}: any) {
+  const [localReply, setLocalReply] = useState("");
+
+  const isOwner = user?.id === comment.userId;
+  const likeCount = likes?.filter(
+    (l: any) => l.commentId === comment._id
+  )?.length;
+
+  return (
+    <div className="pl-4 border-l border-gray-300 my-2">
+      <div className="bg-white p-2 rounded shadow-sm">
+        <div className="flex justify-between items-center">
+          <Link
+            href={`/user/${comment.userId}`}
+            className="text-sm font-semibold text-blue-700 hover:underline"
+          >
+            @{comment.username || "Anonymous"}
+          </Link>
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-gray-500">
+              {formatTimeAgo(comment.createdAt)}
+            </span>
+            {isOwner && (
+              <button
+                onClick={async () => {
+                  if (confirm("Delete this comment?")) {
+                    await deleteComment({ commentId: comment._id });
+                  }
+                }}
+                className="text-xs text-red-500 hover:underline"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
+
+        <p className="text-gray-800 text-sm mt-1">{comment.content}</p>
+
+        <div className="flex gap-4 text-sm mt-1">
+          <button
+            onClick={() => toggleCommentLike({ commentId: comment._id })}
+            className="text-pink-600 hover:underline"
+          >
+            Like
+          </button>
+          <span className="text-gray-700">
+            {likeCount ?? 0} {likeCount === 1 ? "like" : "likes"}
+          </span>
+          <button
+            onClick={() =>
+              setShowReplyBoxes((prev: any) => ({
+                ...prev,
+                [comment._id]: !prev[comment._id],
+              }))
+            }
+            className="text-blue-600 hover:underline"
+          >
+            Reply
+          </button>
+        </div>
+
+        {showReplyBoxes[comment._id] && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const content = replyInputs[comment._id]?.trim();
+              if (!content) return;
+              await addReply({
+                articleId,
+                parentCommentId: comment._id,
+                content,
+              });
+              setReplyInputs((prev: any) => ({
+                ...prev,
+                [comment._id]: "",
+              }));
+              setShowReplyBoxes((prev: any) => ({
+                ...prev,
+                [comment._id]: false,
+              }));
+            }}
+            className="mt-2"
+          >
+            <textarea
+              value={replyInputs[comment._id] || ""}
+              onChange={(e) =>
+                setReplyInputs((prev: any) => ({
+                  ...prev,
+                  [comment._id]: e.target.value,
+                }))
+              }
+              className="w-full p-2 border rounded text-sm"
+              rows={2}
+              placeholder="Reply..."
+            />
+            <button
+              type="submit"
+              className="bg-blue-500 text-white px-3 py-1 rounded text-sm mt-1"
+            >
+              Post Reply
+            </button>
+          </form>
+        )}
+      </div>
+
+      {comment.children?.length > 0 && (
+        <div className="ml-4">
+          {comment.children.map((child: any) => (
+            <CommentNode
+              key={child._id}
+              comment={child}
+              articleId={articleId}
+              user={user}
+              addReply={addReply}
+              deleteComment={deleteComment}
+              toggleCommentLike={toggleCommentLike}
+              likes={likes}
+              replyInputs={replyInputs}
+              setReplyInputs={setReplyInputs}
+              showReplyBoxes={showReplyBoxes}
+              setShowReplyBoxes={setShowReplyBoxes}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ArticleDetailPage() {
   const { id } = useParams();
-  if (!id || id === "null") return <p>Invalid Article ID</p>;
   const articleId = id as Id<"articles">;
-
   const { user } = useUser();
 
   const article = useQuery(api.articles.getArticleById, { id: articleId });
   const likeCount = useQuery(api.likes.getLikes, { articleId });
   const hasLiked = useQuery(api.likes.hasLiked, { articleId });
   const comments = useQuery(api.comments.getComments, { articleId });
+  const commentLikes = useQuery(api.likes.getAllCommentLikes, { articleId });
 
   const like = useMutation(api.likes.like);
   const addComment = useMutation(api.comments.addComment);
@@ -39,31 +196,26 @@ export default function ArticleDetailPage() {
   const toggleCommentLike = useMutation(api.likes.toggleCommentLike);
   const addReply = useMutation(api.comments.replyToComment);
 
-  const deleteReply = useMutation(api.comments.deleteReply);
-
-  const replies = useQuery(api.comments.getRepliesByArticle, { articleId });
-  const commentLikes = useQuery(api.likes.getAllCommentLikes, { articleId });
-
-  // const getReplies = useQuery(api.comments.getReply, { commentId: c._id });
-
   const [commentInput, setCommentInput] = useState("");
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
-  const [showReplyBoxes, setShowReplyBoxes] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [showReplyBoxes, setShowReplyBoxes] = useState<Record<string, boolean>>({});
 
-  if (!article) return <p className="p-6">Loading article...</p>;
+  if (!article || !comments) return <p className="p-6">Loading...</p>;
+
+  const commentTree = buildCommentTree(comments);
 
   return (
     <div className="max-w-4xl mx-auto p-10 mt-10 bg-white rounded shadow">
       <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
-      <p className="text-gray-500 text-xl mb-6 hover:text-gray-900">
-        by
-        <Link href={`/user/${article.authorId}`}> @{article.username}</Link>
+      <p className="text-gray-500 text-xl mb-6">
+        by{" "}
+        <Link href={`/user/${article.authorId}`} className="hover:underline">
+          @{article.username}
+        </Link>
       </p>
 
       <p className="text-gray-700 whitespace-pre-wrap text-lg mb-8">
-        {article.content}{" "}
+        {article.content}
       </p>
 
       <div className="mb-8 flex items-center gap-4">
@@ -72,7 +224,7 @@ export default function ArticleDetailPage() {
           disabled={hasLiked || !user}
           className="text-white bg-pink-600 px-4 py-2 rounded disabled:opacity-60"
         >
-          {hasLiked ? "Liked ❤️" : "Like ❤️"}
+          {hasLiked ? "Liked " : "Like "}
         </button>
         <span className="text-gray-700 text-lg">
           {likeCount ?? 0} {likeCount === 1 ? "like" : "likes"}
@@ -81,7 +233,6 @@ export default function ArticleDetailPage() {
 
       <div>
         <h2 className="text-2xl font-semibold mb-4">Comments</h2>
-
         {user ? (
           <form
             onSubmit={async (e) => {
@@ -111,166 +262,26 @@ export default function ArticleDetailPage() {
         )}
 
         <div className="space-y-4">
-          {comments?.length === 0 && (
-            <p className="text-gray-500">No comments yet, be the first!</p>
+          {commentTree.length === 0 ? (
+            <p className="text-gray-500">No comments yet. Be the first!</p>
+          ) : (
+            commentTree.map((comment: any) => (
+              <CommentNode
+                key={comment._id}
+                comment={comment}
+                articleId={articleId}
+                user={user}
+                addReply={addReply}
+                deleteComment={deleteComment}
+                toggleCommentLike={toggleCommentLike}
+                likes={commentLikes}
+                replyInputs={replyInputs}
+                setReplyInputs={setReplyInputs}
+                showReplyBoxes={showReplyBoxes}
+                setShowReplyBoxes={setShowReplyBoxes}
+              />
+            ))
           )}
-
-          {comments?.map((c) => {
-            const isOwner = c.userId === user?.id;
-            const timeAgo = formatTimeAgo(c.createdAt);
-            const commentReplies = replies?.filter(
-              (r) => r.parentCommentId === c._id
-            );
-            const likesOnComment = commentLikes?.filter(
-              (l) => l.commentId === c._id
-            );
-            const repliesForComment =
-              replies?.filter((r) => r.parentCommentId === c._id) ?? [];
-
-            return (
-              <div key={c._id} className="bg-gray-100 p-4 rounded relative">
-                <div className="flex justify-between mb-1">
-                  <Link
-                    href={`/user/${c.userId}`}
-                    className="text-sm font-semibold text-blue-700 hover:underline"
-                  >
-                    {c.username || "Anonymous"}
-                  </Link>
-
-                  <span className="text-xs text-gray-500">{timeAgo}</span>
-                </div>
-
-                <p className="text-gray-900">{c.content}</p>
-
-                {/* like / reply/ delete */}
-                <div className=" felx gap-4 items-center text-sm">
-                  <button
-                    onClick={() => toggleCommentLike({ commentId: c._id })}
-                    className="text-pink-800 hover:underline"
-                  >
-                    Like
-                  </button>
-                  <span className="text-gray-700">
-                    {likesOnComment ? likesOnComment.length : 0}{" "}
-                    {likesOnComment?.length === 1 ? "like" : "likes"}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setShowReplyBoxes((prev) => ({
-                        ...prev,
-                        [c._id]: !prev[c._id],
-                      }))
-                    }
-                    className="text-blue-900 hover:underline"
-                  >
-                    Reply
-                  </button>
-                </div>
-
-                {isOwner && (
-                  <button
-                    onClick={async () => {
-                      if (confirm("Are you sure?")) {
-                        await deleteComment({ commentId: c._id });
-                      }
-                    }}
-                    className="absolute top-2 right-2 text-red-500 text-xs hover:underline"
-                  >
-                    Delete
-                  </button>
-                )}
-
-                {/* reply box */}
-                {showReplyBoxes[c._id] && user && (
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      if (!replyInputs[c._id]?.trim()) return;
-                      await addReply({
-                        articleId, // ✅ Fix: added this
-                        parentCommentId: c._id,
-                        content: replyInputs[c._id],
-                        username: user.username || "anonymous reply",
-                      });
-                      setReplyInputs((prev) => ({ ...prev, [c._id]: "" }));
-                    }}
-                    className="mt-3"
-                  >
-                    <textarea
-                      value={replyInputs[c._id] || ""}
-                      onChange={(e) =>
-                        setReplyInputs((prev) => ({
-                          ...prev,
-                          [c._id]: e.target.value,
-                        }))
-                      }
-                      placeholder="repy to this..."
-                      className="w-full p-2 border rounded mb-2"
-                      rows={2}
-                    />
-                    <button
-                      type="submit"
-                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
-                    >
-                      Post Reply
-                    </button>
-                  </form>
-                )}
-
-                {/* replies  */}
-                {repliesForComment.length > 0 && (
-                  <div className="mt-4 pl-4 border-l-2 border-gray-300 space-y-3">
-                    {repliesForComment.map((r) => (
-                      <div
-                        key={r._id}
-                        className="bg-white p-2 rounded shadow-sm"
-                      >
-                        {/* <div className="flex justify-between">
-                          <span className="text-sm font-semibold text-gray-800">
-                            {r.username || "Anonymous"}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {formatTimeAgo(r.createdAt)}
-                          </span>
-                        </div> */}
-                        <div className="flex justify-between items-center">
-                          <Link
-                            href={`/user/${r.userId}`}
-                            className="text-sm font-semibold text-blue-700 hover:underline"
-                          >
-                            @{r.username || "Anonymous"}
-                          </Link>
-
-                          <div className="flex gap-2 items-center">
-                            <span className="text-xs text-gray-500">
-                              {formatTimeAgo(r.createdAt)}
-                            </span>
-
-                            {r.userId === user?.id && (
-                              <button
-                                onClick={async () => {
-                                  if (confirm("Delete this reply?")) {
-                                    await deleteReply({ replyId: r._id }); // 👈 uses correct type now
-                                  }
-                                }}
-                                className="text-xs text-red-500 hover:underline"
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        <p className="text-gray-800 text-sm mt-1">
-                          {r.content}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
         </div>
       </div>
     </div>

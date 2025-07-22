@@ -8,21 +8,25 @@ export const getComments = query({
     limit: v.optional(v.string()),
     cursor: v.optional(v.string()),
   },
-  handler: async (ctx, { articleId, limit = 5, cursor }) => {
-    return await ctx.db
+  handler: async (ctx, { articleId }) => {
+    const allElements = await ctx.db
       .query("comments")
       .withIndex("byArticle", (q) => q.eq("articleId", articleId))
-      .order("desc")
+      .order("asc")
       .collect();
+
+      return allElements;
   },
 });
-// convex/comments.ts
+
 export const addComment = mutation({
   args: {
     articleId: v.id("articles"),
     content: v.string(),
+    username: v.optional(v.string()),
+    parentCommentId : v.optional(v.id("comments")),
   },
-  handler: async (ctx, { articleId, content }) => {
+  handler: async (ctx, { articleId, content, parentCommentId }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
@@ -32,32 +36,32 @@ export const addComment = mutation({
       .unique();
 
     const username = user?.username ?? "Anonymous";
-const newComment = await ctx.db.insert("comments", {
-  articleId,
-  content,
-  userId: identity.subject,
-  createdAt: Date.now(),
-  username,
-});
+    const newComment = await ctx.db.insert("comments", {
+      articleId,
+      content,
+      userId: identity.subject,
+      createdAt: Date.now(),
+      username,
+      parentCommentId,
+    });
 
-const article = await ctx.db.get(articleId);
-if (!article) throw new Error("Article not found");
+    const article = await ctx.db.get(articleId);
+    if (!article) throw new Error("Article not found");
 
-// ✅ Use it directly — no ._id
-await ctx.db.insert("notification", {
-  type: "comment",
-  articleId,
-  commentId: newComment,
-  recipientId: article.authorId,
-  senderId: identity.subject,
-  senderUsername: username,
-  commentContent: content,
-  createdAt: Date.now(),
-  read: false,
-});
-
-
-    return newComment;
+    if(!parentCommentId && article.authorId !== identity.subject){ 
+          await ctx.db.insert("notification", {
+            type: "comment",
+            articleId,
+            commentId: newComment,
+            recipientId: article.authorId,
+            senderId: identity.subject,
+            senderUsername: username,
+            commentContent: content,
+            createdAt: Date.now(),
+            read: false,
+          });
+        }
+        return newComment;
   },
 });
 
@@ -77,12 +81,13 @@ export const deleteComment = mutation({
     await ctx.db.delete(commentId);
   },
 });
+
 export const replyToComment = mutation({
   args: {
     articleId: v.id("articles"),
     parentCommentId: v.id("comments"),
     content: v.string(),
-    username: v.string(),
+    // username: v.string(),
   },
   handler: async (ctx, { articleId, parentCommentId, content }) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -98,7 +103,7 @@ export const replyToComment = mutation({
     const parentComment = await ctx.db.get(parentCommentId);
     if (!parentComment) throw new Error("Parent comment not found");
 
-    const reply = await ctx.db.insert("replyOnComment", {
+    const reply = await ctx.db.insert("comments", {
       articleId,
       parentCommentId,
       content,
@@ -107,7 +112,6 @@ export const replyToComment = mutation({
       username,
     });
 
-    // Send notification to original comment author (if not replying to self)
     if (parentComment.userId !== identity.subject) {
       await ctx.db.insert("notification", {
         type: "reply",
@@ -126,16 +130,16 @@ export const replyToComment = mutation({
   },
 });
 
-export const getReply = query ({
-  args: {commentId: v.id("comments")},
-  handler: async (ctx, {commentId}) => {
+export const getReply = query({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, { commentId }) => {
     return await ctx.db
-    .query("replyOnComment")
-    .withIndex("by_commentId", (q) => q.eq("parentCommentId", commentId))
-    .order("asc")
-    .collect()
-  }
-})
+      .query("replyOnComment")
+      .withIndex("by_commentId", (q) => q.eq("parentCommentId", commentId))
+      .order("asc")
+      .collect();
+  },
+});
 
 export const getRepliesByArticle = query({
   args: { articleId: v.id("articles") },
@@ -145,9 +149,7 @@ export const getRepliesByArticle = query({
       .withIndex("byArticle", (q) => q.eq("articleId", articleId))
       .collect();
 
-    const replies = await ctx.db
-      .query("replyOnComment")
-      .collect();
+    const replies = await ctx.db.query("replyOnComment").collect();
 
     return replies.filter((r) =>
       comments.some((c) => c._id === r.parentCommentId)
