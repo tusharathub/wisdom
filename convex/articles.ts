@@ -56,25 +56,40 @@ export const searchArticles = query({
   args: {
     query: v.string(),
     limit: v.optional(v.number()),
-    skip: v.optional(v.number()),
+    sort: v.optional(v.union(v.literal("recent"), v.literal("liked"))),
   },
-  handler: async (ctx, { query, limit }) => {
-    const all = await ctx.db.query("articles").collect();
+  handler: async (ctx, { query, limit = 100, sort = "recent" }) => {
+    const articles = await ctx.db.query("articles").collect();
 
-    if (!query.trim()) {
-      return all.slice(0, limit || 5);
-    }
+    const filtered = query.trim()
+      ? articles.filter((a) =>
+          `${a.title} ${a.content}`.toLowerCase().includes(query.toLowerCase())
+        )
+      : articles;
 
-    const lower = query.toLowerCase();
+    const improved = await Promise.all(
+      filtered.map(async (article) => {
+        const likes = await ctx.db
+          .query("likes")
+          .withIndex("byArticle", (q) => q.eq("articleId", article._id))
+          .collect();
 
-    const filtered = all.filter((a) => {
-      const haystack = `${a.title} ${a.content} `.toLowerCase();
-      return haystack.includes(lower);
-    });
+        return {
+          ...article,
+          likeCount: likes.length,
+        };
+      })
+    );
 
-    return filtered.slice(0, limit || 5);
+    const sorted =
+      sort === "liked"
+        ? improved.sort((a, b) => b.likeCount - a.likeCount)
+        : improved.sort((a, b) => b.createdAt - a.createdAt);
+
+    return sorted.slice(0, limit);
   },
 });
+
 
 export const getArticleById = query({
   args: { id: v.id("articles") },

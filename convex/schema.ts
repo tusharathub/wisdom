@@ -14,12 +14,12 @@ articles: defineTable({
   title: v.string(),
   content: v.string(),
   createdAt: v.number(),
-  authorId: v.string(),        // ✅ KEEP THIS
+  authorId: v.string(),     
   username: v.string(),
   likes: v.array(v.string()),
   tags: v.optional(v.array(v.string())),
 })
-.index("by_authorId", ["authorId"]), // ✅ KEEP THIS
+.index("by_authorId", ["authorId"]),
 
 
   likes: defineTable({
