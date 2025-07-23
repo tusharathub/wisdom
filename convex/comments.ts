@@ -267,7 +267,7 @@ export const getCommentsByRecent = query({
     articleId: v.id("articles"),
     limit: v.number(),
   },
-  handler: async (ctx, { articleId }) => {
+  handler: async (ctx, { articleId, limit }) => {
     const comments = await ctx.db
       .query("comments")
       .withIndex("byArticle", (q) => q.eq("articleId", articleId))
