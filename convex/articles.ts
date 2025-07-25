@@ -1,3 +1,4 @@
+import { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -201,3 +202,40 @@ export const getArticleByUserId = query({
     .collect();
   }
 })
+export const getLikedArticlesByUser = query({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const likes = await ctx.db
+      .query("likes")
+      .withIndex("byUserArticle", (q) => q.eq("userId", userId))
+      .collect();
+
+    const articleIds = likes.map((like) => like.articleId);
+    const articles = await Promise.all(
+      articleIds.map((id) => ctx.db.get(id))
+    );
+
+    const enriched = await Promise.all(
+      articles
+        .filter((a): a is Doc<"articles"> => !!a)
+        .map(async (a) => {
+          const [likeCount, commentCount] = await Promise.all([
+            ctx.db
+              .query("likes")
+              .withIndex("byArticle", (q) => q.eq("articleId", a._id))
+              .collect()
+              .then((l) => l.length),
+            ctx.db
+              .query("comments")
+              .withIndex("byArticle", (q) => q.eq("articleId", a._id))
+              .collect()
+              .then((c) => c.length),
+          ]);
+          return { ...a, likeCount, commentCount };
+        })
+    );
+
+    return enriched;
+  },
+});
+
