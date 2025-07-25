@@ -44,7 +44,6 @@ export default function DashboardPage() {
         Welcome, {user.username || "Teacher"}
       </h1>
 
-      {/* Toggle Section */}
       <div className="flex gap-4 mb-6">
         <button
           onClick={() => setSelectedTab("articles")}

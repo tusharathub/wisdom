@@ -19,7 +19,6 @@ function formatTimeAgo(timestamp: number): string {
   return "Just now";
 }
 
-// Build nested comment tree
 function buildCommentTree(comments: any[]) {
   const map: Record<string, any> = {};
   const roots: any[] = [];
@@ -43,7 +42,6 @@ function buildCommentTree(comments: any[]) {
   return roots;
 }
 
-// Recursive comment node
 function CommentNode({
   comment,
   articleId,
@@ -58,10 +56,14 @@ function CommentNode({
   setShowReplyBoxes,
 }: any) {
   const isOwner = user?.id === comment.userId;
-  const likeCount = likes?.filter((l: any) => l.commentId === comment._id)?.length;
+  const likeCount = likes?.filter(
+    (l: any) => l.commentId === comment._id
+  )?.length;
 
   return (
-    <div className={`pl-${comment.depth * 4 || 4} border-l border-gray-300 my-2`}>
+    <div
+      className={`pl-${comment.depth * 4 || 4} border-l border-gray-300 my-2`}
+    >
       <div className="bg-white p-2 rounded shadow-sm">
         <div className="flex justify-between items-center">
           <Link
@@ -71,12 +73,14 @@ function CommentNode({
             @{comment.username || "Anonymous"}
           </Link>
           <div className="flex gap-2 items-center">
-            <span className="text-xs text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
+            <span className="text-xs text-gray-500">
+              {formatTimeAgo(comment.createdAt)}
+            </span>
             {isOwner && (
               <button
-                onClick={async () => {
+                onClick={() => {
                   if (confirm("Delete this comment?")) {
-                    await deleteComment({ commentId: comment._id });
+                    deleteComment({ commentId: comment._id });
                   }
                 }}
                 className="text-xs text-red-500 hover:underline"
@@ -187,9 +191,9 @@ export default function ArticleDetailPage() {
 
   const [sortBy, setSortBy] = useState<"recent" | "liked">("recent");
   const [limit, setLimit] = useState(10);
+  const [commentInput, setCommentInput] = useState("");
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [showReplyBoxes, setShowReplyBoxes] = useState<Record<string, boolean>>({});
-  const [commentInput, setCommentInput] = useState("");
 
   const article = useQuery(api.articles.getArticleById, { id: articleId });
   const likeCount = useQuery(api.likes.getLikes, { articleId });
@@ -205,7 +209,7 @@ export default function ArticleDetailPage() {
     ? commentsResult
     : commentsResult?.comments || [];
 
-  const like = useMutation(api.likes.like);
+  const toggleLike = useMutation(api.likes.toggleLike);
   const addComment = useMutation(api.comments.addComment);
   const deleteComment = useMutation(api.comments.deleteComment);
   const toggleCommentLike = useMutation(api.likes.toggleCommentLike);
@@ -231,11 +235,11 @@ export default function ArticleDetailPage() {
 
       <div className="mb-8 flex items-center gap-4">
         <button
-          onClick={() => like({ articleId })}
-          disabled={hasLiked || !user}
+          onClick={() => toggleLike({ articleId })}
+          disabled={!user}
           className="text-white bg-pink-600 px-4 py-2 rounded disabled:opacity-60"
         >
-          {hasLiked ? "Liked " : "Like "}
+          {hasLiked ? "Unlike" : "Like"}
         </button>
         <span className="text-gray-700 text-lg">
           {likeCount ?? 0} {likeCount === 1 ? "like" : "likes"}
@@ -244,26 +248,6 @@ export default function ArticleDetailPage() {
 
       <div>
         <h2 className="text-2xl font-semibold mb-4">Comments</h2>
-
-        {/* Sort toggle */}
-        <div className="flex gap-4 mb-4">
-          <button
-            onClick={() => setSortBy("recent")}
-            className={`px-3 py-1 rounded ${
-              sortBy === "recent" ? "bg-blue-600 text-white" : "bg-gray-100"
-            }`}
-          >
-            Most Recent
-          </button>
-          <button
-            onClick={() => setSortBy("liked")}
-            className={`px-3 py-1 rounded ${
-              sortBy === "liked" ? "bg-blue-600 text-white" : "bg-gray-100"
-            }`}
-          >
-            Most Liked
-          </button>
-        </div>
 
         {user ? (
           <form
@@ -292,6 +276,25 @@ export default function ArticleDetailPage() {
         ) : (
           <p className="text-gray-500 mb-6">Log in to leave a comment.</p>
         )}
+
+        <div className="flex gap-4 mb-4">
+          <button
+            onClick={() => setSortBy("recent")}
+            className={`px-3 py-1 rounded ${
+              sortBy === "recent" ? "bg-blue-600 text-white" : "bg-gray-100"
+            }`}
+          >
+            Most Recent
+          </button>
+          <button
+            onClick={() => setSortBy("liked")}
+            className={`px-3 py-1 rounded ${
+              sortBy === "liked" ? "bg-blue-600 text-white" : "bg-gray-100"
+            }`}
+          >
+            Most Liked
+          </button>
+        </div>
 
         <div className="space-y-4">
           {commentTree.length === 0 ? (

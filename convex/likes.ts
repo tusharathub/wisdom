@@ -55,6 +55,7 @@
 // })
 
 import { api } from "./_generated/api";
+import { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -85,12 +86,11 @@ export const hasLiked = query({
     return !!like;
   },
 });
-
 export const like = mutation({
   args: { articleId: v.id("articles") },
   handler: async (ctx, { articleId }) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Still Not authenticated");
+    if (!identity) throw new Error("Not authenticated");
 
     const alreadyLiked = await ctx.db
       .query("likes")
@@ -104,27 +104,134 @@ export const like = mutation({
         articleId,
         userId: identity.subject,
       });
-    }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+        .unique();
 
-    const username = user?.username ?? "Anonymous";
-    //notification on like
-    const article = await ctx.db.get(articleId);
-    if (!article) throw new Error("article not found");
-    if (article?.authorId !== identity.subject) {
-      await ctx.runMutation(api.notification.createNotification, {
-        recipientId: article.authorId,
-        type: "like",
-        articleId,
-        senderUsername: username,
-      });
+      const username = user?.username ?? "Anonymous";
+
+      const article = await ctx.db.get(articleId);
+      if (!article) throw new Error("Article not found");
+
+      if (article.authorId !== identity.subject) {
+        await ctx.runMutation(api.notification.createNotification, {
+          recipientId: article.authorId,
+          type: "like",
+          articleId,
+          senderUsername: username,
+        });
+      }
+    } else {
+      await ctx.db.delete(alreadyLiked._id);
     }
   },
 });
+
+
+export const getLikedArticlesByUser = query({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    // Step 1: Fetch all likes for this user on articles
+    const likes = await ctx.db
+      .query("likes")
+      .withIndex("byUserArticle", (q) => q.eq("userId", userId))
+      .collect();
+
+    const articleIds = likes.map((like) => like.articleId);
+
+    // Step 2: Fetch the articles themselves
+    const articles = await Promise.all(
+      articleIds.map((id) => ctx.db.get(id))
+    );
+
+    // Step 3: Filter out any deleted/null articles and attach like/comment counts
+    const enrichedArticles = await Promise.all(
+      articles
+        .filter((a): a is Doc<"articles"> => a !== null)
+        .map(async (article) => {
+          const [likeCount, commentCount] = await Promise.all([
+            ctx.db
+              .query("likes")
+              .withIndex("byArticle", (q) => q.eq("articleId", article._id))
+              .collect()
+              .then((res) => res.length),
+            ctx.db
+              .query("comments")
+              .withIndex("byArticle", (q) => q.eq("articleId", article._id))
+              .collect()
+              .then((res) => res.length),
+          ]);
+
+          return {
+            ...article,
+            likeCount,
+            commentCount,
+          };
+        })
+    );
+
+    return enrichedArticles;
+  },
+});
+
+export const toggleLike = mutation({
+  args: { articleId: v.id("articles") },
+  handler: async (ctx, { articleId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const userId = identity.subject;
+
+    const article = await ctx.db.get(articleId);
+    if (!article) throw new Error("Article not found");
+
+    // Check if like already exists
+    const existingLike = await ctx.db
+      .query("likes")
+      .withIndex("byUserArticle", (q) =>
+        q.eq("userId", userId).eq("articleId", articleId)
+      )
+      .unique();
+
+    let liked: boolean;
+
+    if (existingLike) {
+      // If already liked → remove the like (unlike)
+      await ctx.db.delete(existingLike._id);
+      liked = false;
+    } else {
+      // Insert a new like
+      await ctx.db.insert("likes", {
+        articleId,
+        userId,
+      });
+      liked = true;
+
+      // Optional: Send notification to author
+      if (article.authorId !== userId) {
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+          .unique();
+
+        const username = user?.username || "Anonymous";
+
+        await ctx.runMutation(api.notification.createNotification, {
+          recipientId: article.authorId,
+          type: "like",
+          articleId,
+          senderUsername: username,
+        });
+      }
+    }
+
+    // Optionally return status
+    return { liked };
+  },
+});
+
 
 export const toggleCommentLike = mutation({
   args: { commentId: v.id("comments") },
