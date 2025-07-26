@@ -1,7 +1,6 @@
 import { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-
 export const createArticle = mutation({
   args: {
     title: v.string(),
@@ -19,18 +18,21 @@ export const createArticle = mutation({
 
     const username = user?.username ?? "Anonymous";
 
-    await ctx.db.insert("articles", {
+    const articleId = await ctx.db.insert("articles", {
       title,
       content,
       createdAt: Date.now(),
       authorId: identity.subject,
-      // userId: identity.subject,
       username,
       likes: [],
       tags: tags ?? [],
     });
+
+    return articleId; 
   },
 });
+
+
 // export const createArticle = mutation({
 //   args: {
 //     title: v.string(),

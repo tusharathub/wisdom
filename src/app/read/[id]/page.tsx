@@ -237,7 +237,7 @@ export default function ArticleDetailPage() {
         <button
           onClick={() => toggleLike({ articleId })}
           disabled={!user}
-          className="text-white bg-pink-600 px-4 py-2 rounded disabled:opacity-60"
+          className="text-white bg-black px-4 py-2 rounded disabled:opacity-60"
         >
           {hasLiked ? "Unlike" : "Like"}
         </button>
@@ -268,7 +268,7 @@ export default function ArticleDetailPage() {
             />
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              className="bg-black text-white px-4 py-2 rounded hover:bg-black"
             >
               Post Comment
             </button>
@@ -281,7 +281,7 @@ export default function ArticleDetailPage() {
           <button
             onClick={() => setSortBy("recent")}
             className={`px-3 py-1 rounded ${
-              sortBy === "recent" ? "bg-blue-600 text-white" : "bg-gray-100"
+              sortBy === "recent" ? "bg-black text-white" : "bg-gray-100"
             }`}
           >
             Most Recent
@@ -289,7 +289,7 @@ export default function ArticleDetailPage() {
           <button
             onClick={() => setSortBy("liked")}
             className={`px-3 py-1 rounded ${
-              sortBy === "liked" ? "bg-blue-600 text-white" : "bg-gray-100"
+              sortBy === "liked" ? "bg-black text-white" : "bg-gray-100"
             }`}
           >
             Most Liked
@@ -323,7 +323,7 @@ export default function ArticleDetailPage() {
           <div className="text-center mt-6">
             <button
               onClick={() => setLimit((prev) => prev + 10)}
-              className="text-blue-600 hover:underline"
+              className="text-black hover:underline"
             >
               Load more comments
             </button>
