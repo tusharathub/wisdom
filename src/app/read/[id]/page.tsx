@@ -1,4 +1,5 @@
 "use client";
+import type { UserResource } from "@clerk/types";
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
@@ -7,6 +8,36 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import Link from "next/link";
+
+// ------------------- Types ---------------------
+
+interface CommentType {
+  _id: Id<"comments">;
+  articleId: Id<"articles">;
+  userId: string;
+  content: string;
+  createdAt: number;
+  username?: string;
+  parentCommentId?: Id<"comments">;
+  children?: CommentType[];
+  depth?: number;
+}
+
+interface CommentNodeProps {
+  comment: CommentType;
+  articleId: Id<"articles">;
+  user: UserResource | null;
+  addReply: (data: { articleId: Id<"articles">; parentCommentId: Id<"comments">; content: string }) => Promise<void>;
+  deleteComment: (data: { commentId: Id<"comments"> }) => Promise<void>;
+  toggleCommentLike: (data: { commentId: Id<"comments"> }) => Promise<void>;
+  likes: { commentId: Id<"comments"> }[] | undefined;
+  replyInputs: Record<string, string>;
+  setReplyInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  showReplyBoxes: Record<string, boolean>;
+  setShowReplyBoxes: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+}
+
+// ------------------- Utils ---------------------
 
 function formatTimeAgo(timestamp: number): string {
   const diff = Date.now() - timestamp;
@@ -19,9 +50,9 @@ function formatTimeAgo(timestamp: number): string {
   return "Just now";
 }
 
-function buildCommentTree(comments: any[]) {
-  const map: Record<string, any> = {};
-  const roots: any[] = [];
+function buildCommentTree(comments: CommentType[]) {
+  const map: Record<string, CommentType> = {};
+  const roots: CommentType[] = [];
 
   comments.forEach((c) => {
     map[c._id] = { ...c, children: [], depth: 0 };
@@ -32,7 +63,7 @@ function buildCommentTree(comments: any[]) {
       const parent = map[c.parentCommentId];
       if (parent) {
         map[c._id].depth = (parent.depth || 0) + 1;
-        parent.children.push(map[c._id]);
+        parent.children!.push(map[c._id]);
       }
     } else {
       roots.push(map[c._id]);
@@ -41,6 +72,8 @@ function buildCommentTree(comments: any[]) {
 
   return roots;
 }
+
+// ------------------- CommentNode ---------------------
 
 function CommentNode({
   comment,
@@ -54,16 +87,12 @@ function CommentNode({
   setReplyInputs,
   showReplyBoxes,
   setShowReplyBoxes,
-}: any) {
+}: CommentNodeProps) {
   const isOwner = user?.id === comment.userId;
-  const likeCount = likes?.filter(
-    (l: any) => l.commentId === comment._id
-  )?.length;
+  const likeCount = likes?.filter((l) => l.commentId === comment._id)?.length ?? 0;
 
   return (
-    <div
-      className={`pl-${comment.depth * 4 || 4} border-l border-gray-300 my-2`}
-    >
+    <div className={`pl-${(comment.depth ?? 0) * 4 || 4} border-l border-gray-300 my-2`}>
       <div className="bg-white p-2 rounded shadow-sm">
         <div className="flex justify-between items-center">
           <Link
@@ -73,9 +102,7 @@ function CommentNode({
             @{comment.username || "Anonymous"}
           </Link>
           <div className="flex gap-2 items-center">
-            <span className="text-xs text-gray-500">
-              {formatTimeAgo(comment.createdAt)}
-            </span>
+            <span className="text-xs text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
             {isOwner && (
               <button
                 onClick={() => {
@@ -101,11 +128,11 @@ function CommentNode({
             Like
           </button>
           <span className="text-gray-700">
-            {likeCount ?? 0} {likeCount === 1 ? "like" : "likes"}
+            {likeCount} {likeCount === 1 ? "like" : "likes"}
           </span>
           <button
             onClick={() =>
-              setShowReplyBoxes((prev: any) => ({
+              setShowReplyBoxes((prev) => ({
                 ...prev,
                 [comment._id]: !prev[comment._id],
               }))
@@ -122,67 +149,49 @@ function CommentNode({
               e.preventDefault();
               const content = replyInputs[comment._id]?.trim();
               if (!content) return;
-              await addReply({
-                articleId,
-                parentCommentId: comment._id,
-                content,
-              });
-              setReplyInputs((prev: any) => ({
-                ...prev,
-                [comment._id]: "",
-              }));
-              setShowReplyBoxes((prev: any) => ({
-                ...prev,
-                [comment._id]: false,
-              }));
+              await addReply({ articleId, parentCommentId: comment._id, content });
+              setReplyInputs((prev) => ({ ...prev, [comment._id]: "" }));
+              setShowReplyBoxes((prev) => ({ ...prev, [comment._id]: false }));
             }}
             className="mt-2"
           >
             <textarea
               value={replyInputs[comment._id] || ""}
               onChange={(e) =>
-                setReplyInputs((prev: any) => ({
-                  ...prev,
-                  [comment._id]: e.target.value,
-                }))
+                setReplyInputs((prev) => ({ ...prev, [comment._id]: e.target.value }))
               }
               className="w-full p-2 border rounded text-sm"
               rows={2}
               placeholder="Reply..."
             />
-            <button
-              type="submit"
-              className="bg-blue-500 text-white px-3 py-1 rounded text-sm mt-1"
-            >
+            <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded text-sm mt-1">
               Post Reply
             </button>
           </form>
         )}
       </div>
 
-      {comment.children?.length > 0 && (
-        <div className="ml-4">
-          {comment.children.map((child: any) => (
-            <CommentNode
-              key={child._id}
-              comment={child}
-              articleId={articleId}
-              user={user}
-              addReply={addReply}
-              deleteComment={deleteComment}
-              toggleCommentLike={toggleCommentLike}
-              likes={likes}
-              replyInputs={replyInputs}
-              setReplyInputs={setReplyInputs}
-              showReplyBoxes={showReplyBoxes}
-              setShowReplyBoxes={setShowReplyBoxes}
-            />
-          ))}
-        </div>
-      )}
+      {comment.children?.map((child) => (
+        <CommentNode
+          key={child._id}
+          comment={child}
+          articleId={articleId}
+          user={user}
+          addReply={addReply}
+          deleteComment={deleteComment}
+          toggleCommentLike={toggleCommentLike}
+          likes={likes}
+          replyInputs={replyInputs}
+          setReplyInputs={setReplyInputs}
+          showReplyBoxes={showReplyBoxes}
+          setShowReplyBoxes={setShowReplyBoxes}
+        />
+      ))}
     </div>
   );
 }
+
+// ------------------- Main Page ---------------------
 
 export default function ArticleDetailPage() {
   const { id } = useParams();
@@ -195,29 +204,49 @@ export default function ArticleDetailPage() {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [showReplyBoxes, setShowReplyBoxes] = useState<Record<string, boolean>>({});
 
+  // All queries and mutations declared statically (to avoid hook condition error)
   const article = useQuery(api.articles.getArticleById, { id: articleId });
   const likeCount = useQuery(api.likes.getLikes, { articleId });
   const hasLiked = useQuery(api.likes.hasLiked, { articleId });
   const commentLikes = useQuery(api.likes.getAllCommentLikes, { articleId });
-
-  const commentsResult =
-    sortBy === "recent"
-      ? useQuery(api.comments.getCommentsByRecent, { articleId, limit })
-      : useQuery(api.comments.getCommentsByLikes, { articleId, limit });
-
-  const comments = Array.isArray(commentsResult)
-    ? commentsResult
-    : commentsResult?.comments || [];
+  const recentComments = useQuery(api.comments.getCommentsByRecent, { articleId, limit });
+  const likedComments = useQuery(api.comments.getCommentsByLikes, { articleId, limit });
 
   const toggleLike = useMutation(api.likes.toggleLike);
   const addComment = useMutation(api.comments.addComment);
-  const deleteComment = useMutation(api.comments.deleteComment);
-  const toggleCommentLike = useMutation(api.likes.toggleCommentLike);
-  const addReply = useMutation(api.comments.replyToComment);
+const rawDeleteComment = useMutation(api.comments.deleteComment);
 
-  if (!article || !comments) return <p className="p-6">Loading...</p>;
+const deleteComment = async ({ commentId }: { commentId: Id<"comments"> }) => {
+  await rawDeleteComment({ commentId });
+};
+ 
+const toggleCommentLikeRaw = useMutation(api.likes.toggleCommentLike);
 
-  const commentTree = buildCommentTree(comments);
+  const toggleCommentLike = async ({ commentId }: { commentId: Id<"comments"> }) => {
+  await toggleCommentLikeRaw({ commentId });
+};
+
+  
+  const replyToComment = useMutation(api.comments.replyToComment);
+  const addReply = async ({
+  articleId,
+  parentCommentId,
+  content,
+}: {
+  articleId: Id<"articles">;
+  parentCommentId: Id<"comments">;
+  content: string;
+}) => {
+  await replyToComment({ articleId, parentCommentId, content });
+};
+
+  const comments = sortBy === "recent" ? recentComments : likedComments;
+  const commentTree = buildCommentTree(
+  Array.isArray(comments) ? comments : (comments?.comments ?? [])
+);
+
+
+  if (!article) return <p className="p-6">Loading...</p>;
 
   return (
     <div className="max-w-4xl mx-auto p-10 mt-10 bg-white rounded shadow">
@@ -229,9 +258,7 @@ export default function ArticleDetailPage() {
         </Link>
       </p>
 
-      <p className="text-gray-700 whitespace-pre-wrap text-lg mb-8">
-        {article.content}
-      </p>
+      <p className="text-gray-700 whitespace-pre-wrap text-lg mb-8">{article.content}</p>
 
       <div className="mb-8 flex items-center gap-4">
         <button
@@ -266,10 +293,7 @@ export default function ArticleDetailPage() {
               className="w-full border p-3 rounded mb-2"
               rows={2}
             />
-            <button
-              type="submit"
-              className="bg-black text-white px-4 py-2 rounded hover:bg-black"
-            >
+            <button type="submit" className="bg-black text-white px-4 py-2 rounded">
               Post Comment
             </button>
           </form>
@@ -300,12 +324,12 @@ export default function ArticleDetailPage() {
           {commentTree.length === 0 ? (
             <p className="text-gray-500">No comments yet. Be the first!</p>
           ) : (
-            commentTree.map((comment: any) => (
+            commentTree.map((comment) => (
               <CommentNode
                 key={comment._id}
                 comment={comment}
                 articleId={articleId}
-                user={user}
+                user={user ?? null}
                 addReply={addReply}
                 deleteComment={deleteComment}
                 toggleCommentLike={toggleCommentLike}
@@ -321,10 +345,7 @@ export default function ArticleDetailPage() {
 
         {sortBy === "recent" && commentTree.length >= limit && (
           <div className="text-center mt-6">
-            <button
-              onClick={() => setLimit((prev) => prev + 10)}
-              className="text-black hover:underline"
-            >
+            <button onClick={() => setLimit((prev) => prev + 10)} className="text-black hover:underline">
               Load more comments
             </button>
           </div>

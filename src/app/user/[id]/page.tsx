@@ -5,14 +5,14 @@ import { api } from "../../../../convex/_generated/api";
 
 export default function UserProfilePage() {
   const { id } = useParams();
-
-  if (!id || id === "null") return <p>Invalid user ID</p>;
-
   const router = useRouter();
-
   const articles = useQuery(api.articles.getArticleByUserId, {
     userId: id as string,
   });
+
+  if (!id || id === "null") return <p>Invalid user ID</p>;
+
+
 
   return (
     <div className="max-w-4xl mx-auto py-10">

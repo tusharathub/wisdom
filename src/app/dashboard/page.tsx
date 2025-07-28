@@ -27,8 +27,12 @@ export default function DashboardPage() {
 
     try {
       await deleteArticle({ articleId });
-    } catch (err: any) {
-      alert("Failed to delete article: " + err.message);
+    } catch (err: unknown) {
+      if(err instanceof Error ){
+        alert("Failed to delete article : " + err.message);
+      }else{
+        alert("failed to delete article: Unknown Error")
+      };
     }
   };
 

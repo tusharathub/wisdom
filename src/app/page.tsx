@@ -5,9 +5,14 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import Image from 'next/image';
 
-function ArticleCard({ article, onClick }: { article: any; onClick: () => void }) {
+interface Article {
+  _id: string;
+  title: string;
+  content: string;
+}
+
+function ArticleCard({ article, onClick }: { article: Article; onClick: () => void }) {
   return (
     <div
       onClick={onClick}
@@ -110,7 +115,7 @@ export default function Home() {
                 ?   <p className="text-gray-500 font-medium text-center">No wisdom found.<br/>Try another keyword.</p>
                 : (
                   <ul className="space-y-5">
-                    {articles.map((article: any) => (
+                    {articles.map((article: Article) => (
                       <li key={article._id}>
                         <ArticleCard article={article} onClick={() => router.push(`/read/${article._id}`)} />
                       </li>

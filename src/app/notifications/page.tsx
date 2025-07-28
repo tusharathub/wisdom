@@ -30,7 +30,7 @@ export default function NotificationPage() {
     if (user?.id) {
       markAllAsRead({ userId: user.id });
     }
-  }, [user?.id]);
+  }, [user?.id, markAllAsRead]);
 
   if (!user) return <p className="p-6">Login to get notifications</p>;
   if (!notifications) return <p className="p-6">Loading...</p>;

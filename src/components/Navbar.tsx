@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useEffect } from "react";
 
 export default function Navbar() {
   const { user } = useUser();
